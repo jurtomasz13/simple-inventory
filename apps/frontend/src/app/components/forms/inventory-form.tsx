@@ -23,15 +23,15 @@ type InventoryFormProps = {
 export function InventoryForm({ editingInventory, onSubmit, onCancel }: InventoryFormProps) {
     const { control, register, handleSubmit, reset, formState: { errors }} = useForm<InventoryFormValues>({
         resolver: zodResolver(inventorySchema),
-        defaultValues: editingInventory || { name: "" }
+        defaultValues: editingInventory || { name: "", date: new Date() }
     });
-    
+
     const isEditing = !!editingInventory;
-    
+
     useEffect(() => {
-        reset(editingInventory|| {});
+        reset(editingInventory || {});
     }, [editingInventory, reset]);
-    
+
     return (
         <form onSubmit={handleSubmit((data) => onSubmit(data, isEditing))} className="space-y-4">
             <div>
@@ -39,19 +39,13 @@ export function InventoryForm({ editingInventory, onSubmit, onCancel }: Inventor
                 <Controller
                     name="date"
                     control={control}
-                    render={({ field }) => {
-                        // Initialize date field to current date if undefined here, because onChange in DatePicker doesn't trigger re-render
-                        if (!field.value) {
-                            field.onChange(new Date())
-                        }
-
-                        return (
-                            <DatePicker
-                                id="date"
-                                onChange={field.onChange}
-                            />
-                        )    
-                    }} 
+                    render={({ field }) => (
+                        <DatePicker
+                            id="date"
+                            value={field.value}
+                            onChange={field.onChange}
+                        />
+                    )}
                 />
                 {/* {errors.date && <span className="text-red-500">{errors.date.message}</span>} */}
             </div>
