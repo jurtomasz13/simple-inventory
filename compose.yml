@@ -29,8 +29,6 @@ services:
       PORT: 3000
       DATABASE_URL: postgresql://${POSTGRES_USER:-myuser}:${POSTGRES_PASSWORD:-mypassword}@db:5432/${POSTGRES_DB:-mydb}
       JWT_SECRET: ${JWT_SECRET:-development-only-secret-change-me}
-    expose:
-      - '3000'
     depends_on:
       db:
         condition: service_healthy
@@ -50,7 +48,7 @@ services:
         VITE_API_URL: /api
     restart: unless-stopped
     ports:
-      - '${APP_PORT:-8080}:80'
+      - '${APP_PORT:-8088}:8088'
     depends_on:
       backend:
         condition: service_healthy
@@ -60,14 +58,18 @@ services:
       timeout: 3s
       retries: 5
 
-  adminer:
-    image: adminer
-    restart: unless-stopped
-    ports:
-      - '${ADMINER_PORT:-8081}:8080'
-    depends_on:
-      db:
-        condition: service_healthy
+  # adminer:
+  #   image: adminer
+  #   restart: unless-stopped
+  #   ports:
+  #     - '${ADMINER_PORT:-8081}:8080'
+  #   depends_on:
+  #     db:
+  #       condition: service_healthy
 
 volumes:
   pgdata:
+
+networks:
+  npm_default:
+    external: true
