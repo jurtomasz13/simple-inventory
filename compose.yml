@@ -16,6 +16,8 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+    networks:
+      - dino_default
 
   backend:
     build:
@@ -38,6 +40,8 @@ services:
       timeout: 5s
       retries: 10
       start_period: 15s
+    networks:
+      - dino_default
 
   frontend:
     build:
@@ -58,7 +62,8 @@ services:
       timeout: 3s
       retries: 5
     networks:
-      - npm_default
+      - dino_default
+      - npm_network
 
   # adminer:
   #   image: adminer
@@ -73,6 +78,8 @@ volumes:
   pgdata:
 
 networks:
+  dino_default:
+    internal: true
   npm_network:
     external: true
     name: npm_default

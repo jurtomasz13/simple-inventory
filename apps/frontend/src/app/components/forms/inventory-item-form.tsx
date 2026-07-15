@@ -48,7 +48,7 @@ export function InventoryItemForm({
   const [error, setError] = useState("");
 
   const selectedProduct = products.find((product) => product.id === productId);
-  const query = normalizeSearch(productQuery);
+  const query = productId ? "" : normalizeSearch(productQuery);
   const matchingProducts = useMemo(() => {
     if (!query) return products.slice(0, 8);
     return products
@@ -83,7 +83,7 @@ export function InventoryItemForm({
   }, [editingItem, initialProductCode, onInitialProductSelected, products]);
 
   const handleProductKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
-    if (event.key !== "Enter" || matchingProducts.length === 0) return;
+    if (productId || event.key !== "Enter" || matchingProducts.length === 0) return;
     event.preventDefault();
     const exactCode = products.find((product) => normalizeSearch(product.code) === query);
     selectProduct(exactCode ?? matchingProducts[0]);
