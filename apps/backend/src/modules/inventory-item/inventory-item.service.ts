@@ -7,6 +7,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { UserId } from '../user/types';
 import { UpdateInventoryItemDto } from './dto/update-inventory-item.dto';
 import { DefaultArgs } from '@prisma/client/runtime/binary';
+import { InventoryId } from '../inventory/dto/inventory.dto';
 
 @Injectable()
 export class InventoryItemService extends PrismaMapperBase<
@@ -25,10 +26,16 @@ export class InventoryItemService extends PrismaMapperBase<
       data: {
         quantity: createInventoryItemDto.quantity,
         product: {
-          connect: { id: createInventoryItemDto.productId },
+          connect: {
+            id: createInventoryItemDto.productId,
+            userId: userId,
+          },
         },
         room: {
-          connect: { id: createInventoryItemDto.roomId },
+          connect: {
+            id: createInventoryItemDto.roomId,
+            userId: userId,
+          },
         },
         inventory: {
           connect: {
@@ -42,13 +49,36 @@ export class InventoryItemService extends PrismaMapperBase<
     return this.toDefaultDto(inventoryItemEntity);
   }
 
-  async findAll(userId: UserId): Promise<InventoryItemDto[]> {
+  async findAll(id: InventoryId, userId: UserId): Promise<InventoryItemDto[]> {
     const items = await this.prisma.inventoryItem.findMany({
       where: {
         inventory: {
+          id: id,
           userId: userId,
         },
       },
+      include: {
+        product: {
+          select: {
+            id: true,
+            code: true,
+            name: true,
+            unit: true,
+            category: {
+              select: {
+                id: true,
+                name: true,
+              }
+            }
+          }
+        },
+        room: {
+          select: {
+            id: true,
+            name: true,
+          }
+        },
+      }
     });
 
     return this.toDefaultDtos(items);
@@ -86,7 +116,24 @@ export class InventoryItemService extends PrismaMapperBase<
           userId: userId,
         },
       },
-      data: updateData,
+      data: {
+        quantity: updateData.quantity,
+        ...(updateData.productId && {
+          product: {
+            connect: { id: updateData.productId, userId: userId },
+          },
+        }),
+        ...(updateData.roomId && {
+          room: {
+            connect: { id: updateData.roomId, userId: userId },
+          },
+        }),
+        ...(updateData.inventoryId && {
+          inventory: {
+            connect: { id: updateData.inventoryId, userId: userId },
+          },
+        }),
+      },
     });
 
     return this.toDefaultDto(inventoryItemEntity);

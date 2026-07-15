@@ -1,4 +1,3 @@
-// Use Configuration Service later
 export const jwtConstants = {
-  secret: 'PLACEHOLDER_SECRET_KEY',
+  secret: process.env.JWT_SECRET || 'development-only-secret-change-me',
 };

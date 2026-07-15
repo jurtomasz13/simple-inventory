@@ -1,11 +1,11 @@
-import { IsNotEmpty, IsNumber, IsString, Min } from 'class-validator';
+import { IsNotEmpty, IsNumber, IsPositive, IsString } from 'class-validator';
 import type { ProductId } from '../../product/types';
 import type { RoomId } from '../../room/types';
 import type { InventoryId } from '../../inventory/dto/inventory.dto';
 
 export class CreateInventoryItemDto {
   @IsNumber()
-  @Min(1)
+  @IsPositive()
   quantity: number;
 
   @IsString()

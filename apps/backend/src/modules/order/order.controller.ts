@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt.guard';
@@ -22,8 +23,11 @@ export class OrderController {
   constructor(private readonly orderService: OrderService) {}
 
   @Get()
-  getAll(@User() user: UserDto) {
-    return this.orderService.findAll(user.id);
+  getAll(
+    @User() user: UserDto,
+    @Query('inventoryId') inventoryId?: string
+  ) {
+    return this.orderService.findAll(user.id, inventoryId);
   }
 
   @Get(':id')

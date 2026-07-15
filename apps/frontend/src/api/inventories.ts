@@ -1,9 +1,8 @@
-import { InventoryFormValues } from "@/app/components/forms/inventory-form";
 import { api } from "@/lib/axios";
 
 export type CreateInventory = {
     name: string;
-    description: string;
+    date: string | Date;
 }
 
 export type UpdateInventory = CreateInventory;
@@ -13,6 +12,8 @@ export type Inventory = {
     name: string;
     date: string;
     createdAt: string;
+    updatedAt: string;
+    itemCount?: number;
 }
 
 export const QUERY_KEY_INVENTORIES = ["inventories"] as const
@@ -28,15 +29,15 @@ export async function fetchInventory(id: string): Promise<Inventory> {
 }
 
 export async function createInventory(
-    category: InventoryFormValues
+    inventory: CreateInventory
 ): Promise<Inventory> {
-    const res = await api.post<Inventory>("/inventory", category)
+    const res = await api.post<Inventory>("/inventory", inventory)
     return res.data
 }
 
 export async function updateInventory(
     id: string,
-    updates: Partial<InventoryFormValues>
+    updates: Partial<CreateInventory>
 ): Promise<Inventory> {
     const res = await api.patch<Inventory>(`/inventory/${id}`, updates)
     return res.data

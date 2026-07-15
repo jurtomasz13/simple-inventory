@@ -1,11 +1,12 @@
 import { api } from "@/lib/axios";
-import type { Unit } from ".prisma/client";
 import { ProductFormValues } from "@/app/components/forms/product-form";
+
+export type ProductUnit = "PIECE" | "KILOGRAM" | "LITER";
 
 export type CreateProduct = {
     name: string;
     code: string;
-    unit: Unit;
+    unit: ProductUnit;
     categoryId: string;
 }
 
@@ -15,15 +16,12 @@ export type Product = {
     id: string;
     name: string;
     code: string;
-    unit: string;
+    unit: ProductUnit;
     userId: string;
     categoryId: string;
     createdAt: string;
     updatedAt: string;
-    user?: any;
-    category?: any;
-    orderItems?: any;
-    inventoryItems?: any;
+    category?: { id: string; name: string } | null;
 }
 
 export const QUERY_KEY_PRODUCTS = ["products"] as const

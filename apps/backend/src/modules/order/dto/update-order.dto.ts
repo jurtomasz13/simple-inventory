@@ -1,20 +1,29 @@
 import { Type } from 'class-transformer';
-import { IsDate, IsNotEmpty, IsString } from 'class-validator';
-import { UpdateOrderItemDto } from '../../order-item/dto/update-order-item.dto';
+import {
+  ArrayMinSize,
+  IsArray,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  ValidateNested,
+} from 'class-validator';
+import { CreateOrderItemDto } from '../../order-item/dto/create-order-item.dto';
 
 export class UpdateOrderDto {
-  @Type(() => Date)
-  @IsDate()
-  date: Date;
-
+  @IsOptional()
   @IsString()
   @IsNotEmpty()
-  name: string;
+  name?: string;
 
+  @IsOptional()
   @IsString()
   @IsNotEmpty()
-  inventoryId: string;
+  inventoryId?: string;
 
-  @Type(() => UpdateOrderItemDto)
-  orderItems: UpdateOrderItemDto[];
+  @IsOptional()
+  @IsArray()
+  @ArrayMinSize(1)
+  @ValidateNested({ each: true })
+  @Type(() => CreateOrderItemDto)
+  orderItems?: CreateOrderItemDto[];
 }

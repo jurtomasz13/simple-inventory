@@ -5,6 +5,9 @@ import {
   UseGuards,
   Body,
   Get,
+  Redirect,
+  HttpStatus,
+  Query,
 } from '@nestjs/common';
 import { ExtractJwt } from 'passport-jwt';
 import { AuthService } from './auth.service';
@@ -33,6 +36,34 @@ export class AuthController {
   @Post('login')
   async login(@User() user: UserDto) {
     return this.authService.login(user);
+  }
+
+  @Get('login-dummy')
+  @Redirect()
+  async loginDummy(@Query('redirect') requestedRedirect?: string) {
+    const token = await this.authService.loginDummy();
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:4200';
+    const configuredFrontend = new URL(frontendUrl);
+    let redirectUrl = new URL(frontendUrl);
+
+    if (requestedRedirect) {
+      try {
+        const candidate = new URL(requestedRedirect);
+        const isDevelopment = process.env.NODE_ENV !== 'production';
+
+        if (isDevelopment || candidate.origin === configuredFrontend.origin) {
+          redirectUrl = candidate;
+        }
+      } catch {
+        // Nieprawidłowy adres powrotu — użyj skonfigurowanego frontendu.
+      }
+    }
+
+    redirectUrl.searchParams.set('token', token);
+    return {
+      url: redirectUrl.toString(),
+      statusCode: HttpStatus.TEMPORARY_REDIRECT,
+    };
   }
 
   @UseGuards(JwtAuthGuard)

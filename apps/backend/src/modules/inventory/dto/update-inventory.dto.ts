@@ -1,12 +1,14 @@
 import { Type } from 'class-transformer';
-import { IsDate, IsString, IsNotEmpty } from 'class-validator';
+import { IsDate, IsString, IsNotEmpty, IsOptional } from 'class-validator';
 
 export class UpdateInventoryDto {
+  @IsOptional()
   @Type(() => Date)
   @IsDate()
-  date: Date;
+  date?: Date;
 
+  @IsOptional()
   @IsString()
   @IsNotEmpty()
-  name: string;
+  name?: string;
 }

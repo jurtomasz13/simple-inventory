@@ -6,16 +6,21 @@ services:
       POSTGRES_USER: myuser
       POSTGRES_PASSWORD: mypassword
       POSTGRES_DB: mydb
+      PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
       - pgdata:/var/lib/postgresql/data
     ports:
-      - '5432:5432'
+      - '${POSTGRES_PORT:-5432}:5432'
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U myuser -d mydb']
+      interval: 5s
+      timeout: 3s
+      retries: 10
 
   adminer:
     image: adminer
-    restart: always
     ports:
-      - '8080:8080'
+      - '${ADMINER_PORT:-8080}:8080'
 
 volumes:
   pgdata:

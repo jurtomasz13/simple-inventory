@@ -1,4 +1,4 @@
-import { createInventory, deleteInventory, fetchInventory, fetchInventories, QUERY_KEY_INVENTORIES, updateInventory, type Inventory } from "@/api/inventories";
+import { createInventory, deleteInventory, fetchInventory, fetchInventories, QUERY_KEY_INVENTORIES, updateInventory, type CreateInventory } from "@/api/inventories";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 export const useInventories = () => {
@@ -20,7 +20,7 @@ export const useCreateInventory = () => {
 export const useUpdateInventory = () => {
     const queryClient = useQueryClient()
     return useMutation({
-        mutationFn: ({ id, updates }: { id: string; updates: Partial<Inventory> }) =>
+        mutationFn: ({ id, updates }: { id: string; updates: Partial<CreateInventory> }) =>
         updateInventory(id, updates),
         onSuccess: () => queryClient.invalidateQueries({ queryKey: QUERY_KEY_INVENTORIES }),
     })

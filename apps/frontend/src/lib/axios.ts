@@ -1,18 +1,40 @@
 import axios from "axios";
 
+const defaultApiUrl = `${window.location.protocol}//${window.location.hostname}:3000/api`;
+
 export const api = axios.create({
-    baseURL: "http://localhost:3000/api",
+    baseURL: import.meta.env.VITE_API_URL || defaultApiUrl,
     headers: {
         "Content-Type": "application/json",
     },
 });
 
 api.interceptors.request.use((config) => {
-    const token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJkNTc4MjRmZC03YjJmLTRhYTMtOGRmMi00MmQ1MmM5MWZmMTEiLCJlbWFpbCI6Imp1cnRvbWFzejEzQGdtYWlsLmNvbSIsIm5hbWUiOiJUb21layIsImlhdCI6MTc1NTM2NTUwNSwiZXhwIjoxNzU3OTU3NTA1fQ.QgZqphB2bWpFDCiyu0xqSFHSMJLsBlf1P2KzrFUCsO8';
+    const token = localStorage.getItem("accessToken");
 
-    if (token.length && config.headers) {
+    if (token && config.headers) {
         config.headers.Authorization =`Bearer ${token}`; 
     }
 
     return config;
 });
+
+let isRedirectingToLogin = false;
+
+export function getDemoLoginUrl() {
+    const redirect = encodeURIComponent(window.location.href);
+    return `${api.defaults.baseURL}/auth/login-dummy?redirect=${redirect}`;
+}
+
+api.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        if (error.response?.status === 401 && !isRedirectingToLogin) {
+            isRedirectingToLogin = true;
+            localStorage.removeItem("accessToken");
+            window.location.assign(getDemoLoginUrl());
+        }
+
+        return Promise.reject(error);
+    }
+);

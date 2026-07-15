@@ -39,9 +39,18 @@ export class InventoryService extends PrismaMapperBase<
       where: {
         userId: userId,
       },
+      include: {
+        _count: {
+          select: { inventoryItems: true },
+        },
+      },
+      orderBy: { date: 'desc' },
     });
 
-    return this.toDefaultDtos(items);
+    return items.map(({ _count, ...item }) => ({
+      ...this.toDefaultDto(item),
+      itemCount: _count.inventoryItems,
+    }));
   }
 
   async findOne(

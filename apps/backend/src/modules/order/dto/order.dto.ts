@@ -8,13 +8,9 @@ import { OrderItemDto } from '../../order-item/dto/order-item.dto';
 export class OrderDto {
   id: string;
   name: string;
-  inventoryId: InventoryId;
+  inventoryId: InventoryId | null;
   userId: UserId;
 
-  @Transform(({ value }: TransformDate) => value.toISOString(), {
-    toPlainOnly: true,
-  })
-  date: Date;
   @Transform(({ value }: TransformDate) => value.toISOString(), {
     toPlainOnly: true,
   })

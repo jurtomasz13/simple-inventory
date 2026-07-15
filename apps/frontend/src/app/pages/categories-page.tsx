@@ -1,124 +1,47 @@
-import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "../components/ui/table"
-import { Edit, Plus, Trash2 } from "lucide-react"
-import { useState } from "react"
-import { Button } from "../components/ui/button"
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "../components/ui/card"
-import { Dialog, DialogTrigger, DialogContent, DialogTitle, DialogDescription } from "../components/ui/dialog"
-import { DialogHeader } from "../components/ui/dialog"
-import { CategoryForm } from "../components/forms/category-form"
-import { useCategories, useCategoryMutations } from "@/hooks/categories"
-import { Category } from "@/api/categories"
-import { CategoryFormValues } from "../components/forms/category-form"
+import type { Category } from "@/api/categories";
+import { CategoryForm, type CategoryFormValues } from "@/app/components/forms/category-form";
+import { Button } from "@/app/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/app/components/ui/dialog";
+import { useCategories, useCategoryMutations } from "@/hooks/categories";
+import { Edit3, Plus, Tag, Trash2 } from "lucide-react";
+import { useState } from "react";
 
 export function CategoriesPage() {
-    // State
-    const [isDialogOpen, setIsDialogOpen] = useState(false)
-    const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const { data: categories = [], isLoading, error } = useCategories();
+  const { createCategoryMutation, updateCategoryMutation, deleteCategoryMutation } = useCategoryMutations();
+  const isSaving = createCategoryMutation.isPending || updateCategoryMutation.isPending;
 
-    // Queries
-    const { data: categories = [], isLoading, error } = useCategories();
+  const closeDialog = () => { setIsDialogOpen(false); setEditingCategory(null); };
+  const handleSubmit = (data: CategoryFormValues, isEditing: boolean) => {
+    if (isEditing && editingCategory) updateCategoryMutation.mutate({ id: editingCategory.id, updates: data }, { onSuccess: closeDialog });
+    else createCategoryMutation.mutate(data, { onSuccess: closeDialog });
+  };
+  const handleDelete = (category: Category) => {
+    if (window.confirm(`Usunąć kategorię „${category.name}”? Produkty pozostaną bez kategorii.`)) deleteCategoryMutation.mutate(category.id);
+  };
 
-    // Mutations
-    const { createCategoryMutation, updateCategoryMutation, deleteCategoryMutation } = useCategoryMutations();
-
-    const handleEdit = (category: Category) => {
-        setIsDialogOpen(true)
-        setEditingCategory(category);
-    }
-
-    const handleDelete = (id: string) => {
-        deleteCategoryMutation.mutate(id);
-    }
-
-    const handleSubmit = (data: CategoryFormValues, isEditing: boolean) => {
-        console.log('submit');
-        if (isEditing && editingCategory?.id) {
-            updateCategoryMutation.mutate({ id: editingCategory.id, updates: data }, {
-                onSettled: () => setIsDialogOpen(false)
-            });
-        } else {
-            createCategoryMutation.mutate(data, {
-                onSettled: () => setIsDialogOpen(false)
-            });
-        }
-    }
-
-    const handleOpen = () => {
-        setEditingCategory(null);
-    }
-
-    const handleCancel = () => {
-        setIsDialogOpen(false);
-        setEditingCategory(null);
-    }
-
-    return (
-        <div className="mb-6">
-            <div className="flex justify-between">
-                <div>
-                    <h1 className="text-3xl font-bold">Zarządzanie Kategoriami</h1>
-                    <p className="text-xl mt-2 mb-6 font-semibold">Dodawaj i zarządzaj kategoriami w swoim sklepie</p>
-                </div>
-
-                <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                    <DialogTrigger asChild>
-                        <Button onClick={handleOpen} className="self-end mb-6">
-                            <Plus className="h-4 w-4 mr-2" />
-                            Dodaj Kategorię
-                        </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                        <DialogHeader>
-                            <DialogTitle>{editingCategory ? "Edytuj Kategorię" : "Dodaj Nową Kategorię"}</DialogTitle>
-                            <DialogDescription>
-                                {editingCategory ? "Zaktualizuj informacje o kategorii" : "Wprowadź dane nowej Kategorii"}
-                            </DialogDescription>
-                        </DialogHeader>
-
-                        <CategoryForm editingCategory={editingCategory} onSubmit={handleSubmit} onCancel={handleCancel} />
-                    </DialogContent>
-                </Dialog>
-            </div>
-
-            <Card>
-                <CardHeader>
-                <CardTitle>Lista Kategorii</CardTitle>
-                <CardDescription>Wszystkie kategorie w systemie ({categories.length})</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <Table>
-                        <TableHeader>
-                        <TableRow>
-                            <TableHead>Nazwa</TableHead>
-                            {/* <TableHead>Opis</TableHead> */}
-                            <TableHead>Data dodania</TableHead>
-                            <TableHead className="text-right">Akcje</TableHead>
-                        </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                        {categories.map((category) => (
-                            <TableRow key={category.id}>
-                                <TableCell className="font-medium">{category.name}</TableCell>
-                                {/* <TableCell>{category.description}</TableCell> */}
-                                <TableCell>{new Date(category.createdAt).toLocaleDateString("pl-PL")}</TableCell>
-                                <TableCell className="text-right">
-                                    <div className="flex justify-end space-x-2">
-                                        <Button variant="outline" size="sm" onClick={() => handleEdit(category)}>
-                                            <Edit className="h-4 w-4" />
-                                        </Button>
-                                        <Button variant="outline" size="sm" onClick={() => handleDelete(category.id)}>
-                                            <Trash2 className="h-4 w-4" />
-                                        </Button>
-                                    </div>
-                                </TableCell>
-                            </TableRow>
-                        ))}
-                        </TableBody>
-                    </Table>
-                </CardContent>
-            </Card>
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div><p className="text-xs font-bold uppercase tracking-[0.14em] text-primary">Porządek w katalogu</p><h1 className="mt-1 text-3xl font-black tracking-[-0.035em] sm:text-4xl">Kategorie</h1><p className="mt-2 text-muted-foreground">Grupy produktów używane w filtrach i raporcie.</p></div>
+        <Dialog open={isDialogOpen} onOpenChange={(open) => open ? setIsDialogOpen(true) : closeDialog()}>
+          <DialogTrigger asChild><Button size="lg" onClick={() => setEditingCategory(null)}><Plus /> Dodaj kategorię</Button></DialogTrigger>
+          <DialogContent className="rounded-[24px] sm:max-w-lg"><DialogHeader><DialogTitle className="text-2xl">{editingCategory ? "Edytuj kategorię" : "Nowa kategoria"}</DialogTitle><DialogDescription>Nazwa będzie widoczna przy produktach i w podsumowaniu.</DialogDescription></DialogHeader><CategoryForm editingCategory={editingCategory} onSubmit={handleSubmit} onCancel={closeDialog} isPending={isSaving} /></DialogContent>
+        </Dialog>
+      </div>
+      {error ? <p className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">Nie udało się pobrać kategorii.</p> : isLoading ? (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{[0, 1, 2].map((item) => <div key={item} className="h-36 animate-pulse rounded-[24px] border bg-white/60" />)}</div>
+      ) : categories.length === 0 ? (
+        <div className="rounded-[28px] border border-dashed bg-white px-6 py-14 text-center"><Tag className="mx-auto size-8 text-muted-foreground" /><p className="mt-4 font-bold">Brak kategorii</p></div>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {categories.map((category) => <article key={category.id} className="flex items-center gap-4 rounded-[22px] border bg-white p-4 shadow-sm"><div className="grid size-11 shrink-0 place-items-center rounded-2xl bg-[#fff4be] text-[#775d00]"><Tag /></div><div className="min-w-0 flex-1"><h2 className="truncate font-bold">{category.name}</h2><p className="mt-1 text-xs text-muted-foreground">Dodano {new Date(category.createdAt).toLocaleDateString("pl-PL")}</p></div><Button variant="ghost" size="icon" aria-label={`Edytuj ${category.name}`} onClick={() => { setEditingCategory(category); setIsDialogOpen(true); }}><Edit3 /></Button><Button variant="ghost" size="icon" className="text-muted-foreground hover:bg-red-50 hover:text-destructive" aria-label={`Usuń ${category.name}`} onClick={() => handleDelete(category)}><Trash2 /></Button></article>)}
         </div>
-    )
+      )}
+    </div>
+  );
 }
 
 export default CategoriesPage;

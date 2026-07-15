@@ -14,7 +14,11 @@ import { ChangeEvent, useState } from "react"
 
 function formatDate(date: Date | undefined) {
     if (!date) {
-        return ""
+        return "";
+    }
+
+    if (typeof date === "string") {
+        date = new Date(date);
     }
 
     return date.toLocaleDateString("en-US", {
@@ -35,7 +39,7 @@ export function DatePicker({ value: initialValue, onChange, id = "date" }: DateP
     const [open, setOpen] = useState(false)
     const [date, setDate] = useState<Date>(
         initialValue
-    )
+    );
     const [month, setMonth] = useState<Date | undefined>(date)
     const [value, setValue] = useState(formatDate(initialValue))
 

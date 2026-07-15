@@ -15,18 +15,19 @@ import { User } from '../../decorators/user.decorator';
 import { UserDto } from '../user/dto/user.dto';
 import { CreateStandaloneInventoryItemDto } from './dto/create-inventory-item.dto';
 import { UpdateInventoryItemDto } from './dto/update-inventory-item.dto';
+import type { InventoryId } from '../inventory/dto/inventory.dto';
 
 @UseGuards(JwtAuthGuard)
 @Controller('inventory-item')
 export class InventoryItemController {
   constructor(private readonly inventoryItemService: InventoryItemService) {}
 
-  @Get()
-  getAll(@User() user: UserDto) {
-    return this.inventoryItemService.findAll(user.id);
+  @Get(':id')
+  getAll(@Param('id') id: InventoryId, @User() user: UserDto) {
+    return this.inventoryItemService.findAll(id, user.id);
   }
 
-  @Get(':id')
+  @Get('/position/:id')
   get(@Param('id') id: InventoryItemId, @User() user: UserDto) {
     return this.inventoryItemService.findOneById(id, user.id);
   }

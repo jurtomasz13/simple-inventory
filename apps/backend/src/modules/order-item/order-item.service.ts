@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { OrderItem, Prisma } from '@prisma/client';
 import { PrismaMapperBase } from '../../common/prisma-mapper.base';
 import { PrismaService } from '../prisma/prisma.service';
@@ -17,10 +17,43 @@ export class OrderItemService extends PrismaMapperBase<
     super(OrderItemDto);
   }
 
+  private async ensureProductWasCounted(
+    orderId: string,
+    productId: string,
+    userId: UserId
+  ) {
+    const order = await this.prisma.order.findUniqueOrThrow({
+      where: { id: orderId, userId },
+      select: { inventoryId: true },
+    });
+    if (!order.inventoryId) {
+      throw new BadRequestException('Paragon nie jest przypięty do inwentaryzacji.');
+    }
+    const countedItem = await this.prisma.inventoryItem.findFirst({
+      where: {
+        inventoryId: order.inventoryId,
+        productId,
+        inventory: { userId },
+        product: { userId },
+      },
+      select: { id: true },
+    });
+    if (!countedItem) {
+      throw new BadRequestException(
+        'Na paragonie można umieścić tylko produkt policzony w tej inwentaryzacji.'
+      );
+    }
+  }
+
   async create(
     createOrderItemDto: CreateStandaloneOrderItemDto,
     userId: UserId
   ): Promise<OrderItemDto> {
+    await this.ensureProductWasCounted(
+      createOrderItemDto.orderId,
+      createOrderItemDto.productId,
+      userId
+    );
     const orderItemEntity = await this.prisma.orderItem.create({
       data: {
         quantity: createOrderItemDto.quantity,
@@ -37,6 +70,10 @@ export class OrderItemService extends PrismaMapperBase<
           },
         },
       },
+      include: {
+        product: { include: { category: true } },
+        order: { include: { inventory: true } },
+      },
     });
 
     return this.toDefaultDto(orderItemEntity);
@@ -48,6 +85,10 @@ export class OrderItemService extends PrismaMapperBase<
         order: {
           userId: userId,
         },
+      },
+      include: {
+        product: { include: { category: true } },
+        order: { include: { inventory: true } },
       },
     });
 
@@ -72,6 +113,10 @@ export class OrderItemService extends PrismaMapperBase<
           userId: userId,
         },
       },
+      include: {
+        product: { include: { category: true } },
+        order: { include: { inventory: true } },
+      },
     });
   }
 
@@ -80,6 +125,16 @@ export class OrderItemService extends PrismaMapperBase<
     updateData: UpdateOrderItemDto,
     userId: UserId
   ): Promise<OrderItemDto> {
+    const currentItem = await this.prisma.orderItem.findUniqueOrThrow({
+      where: { id, order: { userId } },
+      select: { productId: true, orderId: true },
+    });
+    const productId = updateData.productId ?? currentItem.productId;
+    const orderId = updateData.orderId ?? currentItem.orderId;
+    if (!productId) {
+      throw new BadRequestException('Produkt na paragonie nie istnieje.');
+    }
+    await this.ensureProductWasCounted(orderId, productId, userId);
     const orderItemEntity = await this.prisma.orderItem.update({
       where: {
         id: id,
@@ -87,7 +142,19 @@ export class OrderItemService extends PrismaMapperBase<
           userId: userId,
         },
       },
-      data: updateData,
+      data: {
+        quantity: updateData.quantity,
+        ...(updateData.productId && {
+          product: { connect: { id: updateData.productId, userId } },
+        }),
+        ...(updateData.orderId && {
+          order: { connect: { id: updateData.orderId, userId } },
+        }),
+      },
+      include: {
+        product: { include: { category: true } },
+        order: { include: { inventory: true } },
+      },
     });
 
     return this.toDefaultDto(orderItemEntity);

@@ -17,9 +17,10 @@ type CategoryFormProps = {
     onSubmit: (data: CategoryFormValues, isEditing: boolean) => void;
     onCancel: () => void;
     editingCategory?: Partial<CategoryFormValues> | null;
+    isPending?: boolean;
 }
 
-export function CategoryForm({ editingCategory, onSubmit, onCancel }: CategoryFormProps) {
+export function CategoryForm({ editingCategory, onSubmit, onCancel, isPending }: CategoryFormProps) {
     const { register, handleSubmit, reset, formState: { errors }} = useForm<CategoryFormValues>({
         resolver: zodResolver(categorySchema),
         defaultValues: editingCategory || { name: "" }
@@ -28,7 +29,7 @@ export function CategoryForm({ editingCategory, onSubmit, onCancel }: CategoryFo
     const isEditing = !!editingCategory;
     
     useEffect(() => {
-        reset(editingCategory || {});
+        reset(editingCategory || { name: "" });
     }, [editingCategory, reset]);
     
     return (
@@ -46,10 +47,10 @@ export function CategoryForm({ editingCategory, onSubmit, onCancel }: CategoryFo
             </div> */}
 
             <div className="flex justify-end space-x-2">
-                <Button type="button" variant="outline" onClick={onCancel}>
+                <Button type="button" variant="outline" onClick={onCancel} disabled={isPending}>
                     Anuluj
                 </Button>
-                <Button type="submit">{isEditing ? "Zaktualizuj" : "Dodaj"}</Button>
+                <Button type="submit" disabled={isPending}>{isPending ? "Zapisywanie…" : isEditing ? "Zapisz zmiany" : "Dodaj kategorię"}</Button>
             </div>
         </form>
     )

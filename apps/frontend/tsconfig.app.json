@@ -14,7 +14,6 @@
     "rootDir": "src",
     "module": "esnext",
     "moduleResolution": "bundler",
-    "baseUrl": ".",
     "paths": {
       "@/*": [
         "./src/*"

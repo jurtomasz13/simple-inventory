@@ -5,11 +5,10 @@ import { Label } from "../ui/label";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 import { useEffect } from "react";
-import { Room } from "@/api/rooms";
 
 const roomSchema = z.object({
     name: z.string().min(2, "Nazwa pomieszczenia musi mieć co najmniej 2 znaki"),
-    description: z.string(),
+    description: z.string().optional(),
 });
 
 export type RoomFormValues = z.infer<typeof roomSchema>;
@@ -18,18 +17,19 @@ type RoomFormProps = {
     onSubmit: (data: RoomFormValues, isEditing: boolean) => void;
     onCancel: () => void;
     editingRoom?: Partial<RoomFormValues> | null;
+    isPending?: boolean;
 }
 
-export function RoomForm({ editingRoom, onSubmit, onCancel }: RoomFormProps) {
+export function RoomForm({ editingRoom, onSubmit, onCancel, isPending }: RoomFormProps) {
     const { register, handleSubmit, reset, formState: { errors }} = useForm<RoomFormValues>({
         resolver: zodResolver(roomSchema),
-        defaultValues: editingRoom || { name: "" }
+        defaultValues: editingRoom || { name: "", description: "" }
     });
     
     const isEditing = !!editingRoom;
     
     useEffect(() => {
-        reset(editingRoom|| {});
+        reset(editingRoom || { name: "", description: "" });
     }, [editingRoom, reset]);
     
     return (
@@ -47,10 +47,10 @@ export function RoomForm({ editingRoom, onSubmit, onCancel }: RoomFormProps) {
             </div>
 
             <div className="flex justify-end space-x-2">
-                <Button type="button" variant="outline" onClick={onCancel}>
+                <Button type="button" variant="outline" onClick={onCancel} disabled={isPending}>
                     Anuluj
                 </Button>
-                <Button type="submit">{isEditing ? "Zaktualizuj" : "Dodaj"}</Button>
+                <Button type="submit" disabled={isPending}>{isPending ? "Zapisywanie…" : isEditing ? "Zapisz zmiany" : "Dodaj strefę"}</Button>
             </div>
         </form>
     )

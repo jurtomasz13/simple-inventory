@@ -7,27 +7,30 @@ import { Button } from "../ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { useEffect } from "react";
 import { Category } from "@/api/categories";
+import { BarcodeScannerButton } from "../barcode-scanner";
 
 const productSchema = z.object({
-  name: z.string().min(2, "Nazwa produktu musi mieć co najmniej 2 znaki"),
-  code: z.string().min(1, "Kod produktu jest wymagany"),
-  unit: z.string().min(1, "Jednostka jest wymagana"),
-  categoryId: z.string().optional(),
+  name: z.string().trim().min(2, "Nazwa produktu musi mieć co najmniej 2 znaki"),
+  code: z.string().trim().min(1, "Kod produktu jest wymagany"),
+  unit: z.enum(["KILOGRAM", "PIECE", "LITER"], { message: "Jednostka jest wymagana" }),
+  categoryId: z.string().min(1, "Kategoria jest wymagana"),
 });
 
 export type ProductFormValues = z.infer<typeof productSchema>;
 
 type ProductFormProps = {
     editingProduct?: Partial<ProductFormValues> | null;
+    initialCode?: string;
     categories: Category[],
     onSubmit: (data: ProductFormValues, isEditing: boolean) => void;
     onCancel: () => void;
+    isPending?: boolean;
 }
 
-export function ProductForm({ editingProduct, categories, onSubmit, onCancel }: ProductFormProps) {
-    const { control, register, handleSubmit, reset, formState: { errors }} = useForm<ProductFormValues>({
+export function ProductForm({ editingProduct, initialCode = "", categories, onSubmit, onCancel, isPending }: ProductFormProps) {
+    const { control, register, handleSubmit, reset, setValue, formState: { errors }} = useForm<ProductFormValues>({
         resolver: zodResolver(productSchema),
-        defaultValues: editingProduct || { name: "", code: "", unit: "", categoryId: "" }
+        defaultValues: editingProduct || { name: "", code: initialCode, unit: undefined, categoryId: "" }
     });
     
     const isEditing = !!editingProduct;
@@ -39,8 +42,8 @@ export function ProductForm({ editingProduct, categories, onSubmit, onCancel }: 
     ];
     
     useEffect(() => {
-        reset(editingProduct || {});
-    }, [editingProduct, reset]);
+        reset(editingProduct || { name: "", code: initialCode, unit: undefined, categoryId: "" });
+    }, [editingProduct, initialCode, reset]);
     
     return (
         <form onSubmit={handleSubmit((data) => onSubmit(data, isEditing ))} className="space-y-4">
@@ -52,7 +55,13 @@ export function ProductForm({ editingProduct, categories, onSubmit, onCancel }: 
 
             <div>
                 <Label htmlFor="code">Kod produktu</Label>
-                <Input id="code" placeholder="np. MEAT001" {...register("code")} />
+                <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2">
+                    <Input id="code" inputMode="text" autoComplete="off" placeholder="np. EAN 5901234123457" {...register("code")} />
+                    <BarcodeScannerButton
+                        onDetected={(code) => setValue("code", code, { shouldDirty: true, shouldTouch: true, shouldValidate: true })}
+                        label="Skanuj"
+                    />
+                </div>
                 {errors.code && <span className="text-red-500">{errors.code.message}</span>}
             </div>
 
@@ -67,7 +76,7 @@ export function ProductForm({ editingProduct, categories, onSubmit, onCancel }: 
                             value={field.value}
                             onValueChange={field.onChange}
                         >
-                        <SelectTrigger>
+                        <SelectTrigger className="w-full">
                             <SelectValue placeholder="Wybierz jednostkę" />
                         </SelectTrigger>
                         <SelectContent>
@@ -94,7 +103,7 @@ export function ProductForm({ editingProduct, categories, onSubmit, onCancel }: 
                             value={field.value}
                             onValueChange={field.onChange}
                         >
-                        <SelectTrigger>
+                        <SelectTrigger className="w-full">
                             <SelectValue placeholder="Wybierz kategorię" />
                         </SelectTrigger>
                         <SelectContent>
@@ -107,14 +116,14 @@ export function ProductForm({ editingProduct, categories, onSubmit, onCancel }: 
                         </Select>
                     )}
                 />
-                {errors.unit && <span className="text-red-500">{errors.unit.message}</span>}
+                {errors.categoryId && <span className="text-red-500">{errors.categoryId.message}</span>}
             </div>
 
             <div className="flex justify-end space-x-2">
-                <Button type="button" variant="outline" onClick={onCancel}>
+                <Button type="button" variant="outline" onClick={onCancel} disabled={isPending}>
                     Anuluj
                 </Button>
-                <Button type="submit">{isEditing ? "Zaktualizuj" : "Dodaj"}</Button>
+                <Button type="submit" disabled={isPending}>{isPending ? "Zapisywanie…" : isEditing ? "Zapisz zmiany" : "Dodaj produkt"}</Button>
             </div>
         </form>
     )

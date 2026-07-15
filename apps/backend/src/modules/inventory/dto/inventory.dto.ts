@@ -7,6 +7,7 @@ export class InventoryDto {
   id: string;
   name: string;
   userId: string;
+  itemCount?: number;
 
   @Transform(({ value }: TransformDate) => value.toISOString(), {
     toPlainOnly: true,

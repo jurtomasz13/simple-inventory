@@ -25,7 +25,7 @@ type InventoryStore = {
 };
 
 export const useInventoryStore = create<InventoryStore>((set) => ({
-    filters: { category: "", status: "" },
+    filters: { category: "" },
     setFilter: (key, value) => 
         set((state) => ({
             filters: { ...state.filters, [key]: value },
@@ -39,3 +39,5 @@ export const useInventoryStore = create<InventoryStore>((set) => ({
     setPageSize: (size) =>
         set((state) => ({ pagination: { ...state.pagination, pageSize: size, page: 1 }}))
 }));
+
+export default useInventoryStore;

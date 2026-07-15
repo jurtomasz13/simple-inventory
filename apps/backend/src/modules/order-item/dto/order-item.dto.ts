@@ -6,7 +6,7 @@ import { ProductDto } from '../../product/dto/product.dto';
 export class OrderItemDto {
   id: string;
   quantity: number;
-  productId: ProductId;
+  productId: ProductId | null;
   orderId: OrderId;
 
   @Type(() => ProductDto)

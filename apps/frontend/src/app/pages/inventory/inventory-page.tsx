@@ -1,130 +1,155 @@
-import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "../../components/ui/table"
-import { Edit, Plus, Trash2, View } from "lucide-react"
-import { useState } from "react"
-import { Button } from "../../components/ui/button"
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "../../components/ui/card"
-import { Dialog, DialogTrigger, DialogContent, DialogTitle, DialogDescription } from "../../components/ui/dialog"
-import { DialogHeader } from "../../components/ui/dialog"
-import { Inventory } from "@/api/inventories"
-import { useInventoryMutations, useInventories } from "@/hooks/inventories"
-import { InventoryForm, InventoryFormValues } from "@/app/components/forms/inventory-form"
-import { Link } from "react-router-dom"
+import { CalendarDays, ClipboardList, Edit3, FileText, PackageSearch, Plus, Trash2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Button } from "../../components/ui/button";
+import { Dialog, DialogTrigger, DialogContent, DialogTitle, DialogDescription, DialogHeader } from "../../components/ui/dialog";
+import type { Inventory } from "@/api/inventories";
+import { useInventoryMutations, useInventories } from "@/hooks/inventories";
+import { InventoryForm, type InventoryFormValues } from "@/app/components/forms/inventory-form";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+
+const formatDate = (date: string) =>
+    new Intl.DateTimeFormat("pl-PL", { day: "2-digit", month: "long", year: "numeric" }).format(new Date(date));
 
 export function InventoryPage() {
-    // State
-    const [isDialogOpen, setIsDialogOpen] = useState(false)
-    const [editingInventory, setEditingRoom] = useState<Inventory | null>(null);
-
-    // Queries
+    const [searchParams, setSearchParams] = useSearchParams();
+    const navigate = useNavigate();
+    const [isDialogOpen, setIsDialogOpen] = useState(searchParams.get("new") === "true");
+    const [editingInventory, setEditingInventory] = useState<Inventory | null>(null);
     const { data: inventories = [], isLoading, error } = useInventories();
-
-    // Mutations
     const { createInventoryMutation, deleteInventoryMutation, updateInventoryMutation } = useInventoryMutations();
+    const isSaving = createInventoryMutation.isPending || updateInventoryMutation.isPending;
 
-    // TODO: add EDIT feature
-    const handleEdit = (room: Inventory) => {
-        setIsDialogOpen(true)
-        setEditingRoom(room);
-    }
+    useEffect(() => {
+        if (searchParams.get("new") === "true") {
+            setEditingInventory(null);
+            setIsDialogOpen(true);
+        }
+    }, [searchParams]);
 
-    const handleDelete = (id: string) => {
-        deleteInventoryMutation.mutate(id);
-    }
+    const closeDialog = () => {
+        setIsDialogOpen(false);
+        setEditingInventory(null);
+        if (searchParams.has("new")) {
+            const next = new URLSearchParams(searchParams);
+            next.delete("new");
+            setSearchParams(next, { replace: true });
+        }
+    };
 
     const handleSubmit = (data: InventoryFormValues, isEditing: boolean) => {
-        if (isEditing && editingInventory?.id) {
-            updateInventoryMutation.mutate({ id: editingInventory.id, updates: data }, {
-                onSettled: () => setIsDialogOpen(false)
-            });
-        } else {
-            createInventoryMutation.mutate(data, {
-                onSettled: () => setIsDialogOpen(false)
-            });
+        if (isEditing && editingInventory) {
+            updateInventoryMutation.mutate(
+                { id: editingInventory.id, updates: data },
+                { onSuccess: closeDialog }
+            );
+            return;
         }
-        setIsDialogOpen(false);
-    }
 
-    const handleOpen = () => {
-        setEditingRoom(null);
-    }
+        createInventoryMutation.mutate(data, {
+            onSuccess: (inventory) => navigate(`/inventory/${inventory.id}/positions`),
+        });
+    };
 
-    const handleCancel = () => {
-        setIsDialogOpen(false);
-        setEditingRoom(null);
-    }
+    const handleDelete = (inventory: Inventory) => {
+        const confirmed = window.confirm(`Usunąć „${inventory.name}” wraz ze wszystkimi pozycjami?`);
+        if (confirmed) deleteInventoryMutation.mutate(inventory.id);
+    };
 
     return (
-        <div className="mb-6">
-            <div className="flex justify-between">
+        <div className="space-y-6">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                 <div>
-                    <h1 className="text-3xl font-bold">Zarządzanie Inwentaryzacją</h1>
-                    <p className="text-xl mt-2 mb-6 font-semibold">Dodawaj i zarządzaj inwentaryzacją w swoim sklepie</p>
+                    <p className="text-xs font-bold uppercase tracking-[0.14em] text-primary">Arkusze robocze</p>
+                    <h1 className="mt-1 text-3xl font-black tracking-[-0.035em] sm:text-4xl">Inwentaryzacje</h1>
+                    <p className="mt-2 max-w-2xl text-muted-foreground">Wybierz arkusz i kontynuuj liczenie albo rozpocznij nową inwentaryzację.</p>
                 </div>
 
-                <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                <Dialog open={isDialogOpen} onOpenChange={(open) => open ? setIsDialogOpen(true) : closeDialog()}>
                     <DialogTrigger asChild>
-                        <Button onClick={handleOpen} className="self-end mb-6">
-                            <Plus className="h-4 w-4 mr-2" />
-                            Dodaj Inwentaryzację
+                        <Button size="lg" onClick={() => setEditingInventory(null)}>
+                            <Plus className="size-5" />
+                            Nowa inwentaryzacja
                         </Button>
                     </DialogTrigger>
-                    <DialogContent>
+                    <DialogContent className="rounded-[24px] sm:max-w-xl">
                         <DialogHeader>
-                            <DialogTitle>{editingInventory ? "Edytuj Inwentaryzację" : "Dodaj Nowe Pomieszczenie"}</DialogTitle>
+                            <DialogTitle className="text-2xl">{editingInventory ? "Edytuj arkusz" : "Nowa inwentaryzacja"}</DialogTitle>
                             <DialogDescription>
-                                {editingInventory ? "Zaktualizuj informacje o inwentaryzacji" : "Wprowadź dane nowej inwentaryzacji"}
+                                {editingInventory ? "Zmień nazwę lub datę arkusza." : "Nadaj nazwę arkuszowi. Po zapisaniu od razu przejdziesz do liczenia."}
                             </DialogDescription>
                         </DialogHeader>
-
-                        <InventoryForm editingInventory={editingInventory} onSubmit={handleSubmit} onCancel={handleCancel} />
+                        <InventoryForm
+                            editingInventory={editingInventory}
+                            onSubmit={handleSubmit}
+                            onCancel={closeDialog}
+                            isPending={isSaving}
+                        />
                     </DialogContent>
                 </Dialog>
             </div>
 
-            <Card>
-                <CardHeader>
-                <CardTitle>Lista Inwentaryzacji</CardTitle>
-                <CardDescription>Wszystkie inwentaryzacje w systemie ({inventories.length})</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <Table>
-                        <TableHeader>
-                        <TableRow>
-                            <TableHead>Nazwa</TableHead>
-                            <TableHead>Data</TableHead>
-                            {/* <TableHead>Status</TableHead> */}
-                            <TableHead className="text-right">Akcje</TableHead>
-                        </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                        {inventories.map((inventory) => (
-                            <TableRow key={inventory.id}>
-                                <TableCell className="font-medium">{inventory.name}</TableCell>
-                                {/* <TableCell></TableCell> */}
-                                <TableCell>{new Date(inventory.createdAt).toLocaleDateString("pl-PL")}</TableCell>
-                                <TableCell className="text-right">
-                                    <div className="flex justify-end space-x-2">
-                                        <Link to={`./${inventory.id}`}>
-                                            <Button variant="outline" size="sm">
-                                                <View className="h-4 w-4" />
-                                            </Button>
-                                        </Link>
-                                        <Button variant="outline" size="sm" onClick={() => handleEdit(inventory)}>
-                                            <Edit className="h-4 w-4" />
-                                        </Button>
-                                        <Button variant="outline" size="sm" onClick={() => handleDelete(inventory.id)}>
-                                            <Trash2 className="h-4 w-4" />
-                                        </Button>
-                                    </div>
-                                </TableCell>
-                            </TableRow>
-                        ))}
-                        </TableBody>
-                    </Table>
-                </CardContent>
-            </Card>
+            {error && (
+                <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-800">
+                    Nie udało się pobrać inwentaryzacji. Sprawdź połączenie z serwerem i spróbuj ponownie.
+                </div>
+            )}
+
+            {isLoading ? (
+                <div className="grid gap-4 md:grid-cols-2">
+                    {[0, 1, 2, 3].map((item) => <div key={item} className="h-56 animate-pulse rounded-[24px] border bg-white/60" />)}
+                </div>
+            ) : inventories.length === 0 ? (
+                <div className="rounded-[28px] border border-dashed bg-white px-6 py-16 text-center">
+                    <div className="mx-auto grid size-14 place-items-center rounded-2xl bg-[#e8f3ed] text-primary">
+                        <ClipboardList className="size-7" />
+                    </div>
+                    <h2 className="mt-5 text-xl font-bold">Nie ma jeszcze żadnego arkusza</h2>
+                    <p className="mx-auto mt-2 max-w-md text-muted-foreground">Utwórz pierwszą inwentaryzację i zacznij dodawać policzone produkty.</p>
+                    <Button className="mt-6" size="lg" onClick={() => setIsDialogOpen(true)}><Plus /> Utwórz arkusz</Button>
+                </div>
+            ) : (
+                <div className="grid gap-4 md:grid-cols-2">
+                    {inventories.map((inventory, index) => (
+                        <article key={inventory.id} className="group rounded-[24px] border bg-white p-5 shadow-sm transition hover:border-primary/30 hover:shadow-md sm:p-6">
+                            <div className="flex items-start justify-between gap-4">
+                                <div className="grid size-12 shrink-0 place-items-center rounded-2xl bg-[#e8f3ed] text-primary">
+                                    <FileText className="size-6" />
+                                </div>
+                                <div className="flex items-center gap-1">
+                                    <Button variant="ghost" size="icon" aria-label={`Edytuj ${inventory.name}`} onClick={() => { setEditingInventory(inventory); setIsDialogOpen(true); }}>
+                                        <Edit3 />
+                                    </Button>
+                                    <Button variant="ghost" size="icon" className="text-muted-foreground hover:bg-red-50 hover:text-destructive" aria-label={`Usuń ${inventory.name}`} onClick={() => handleDelete(inventory)}>
+                                        <Trash2 />
+                                    </Button>
+                                </div>
+                            </div>
+
+                            <div className="mt-5">
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <h2 className="text-xl font-bold tracking-tight">{inventory.name}</h2>
+                                    {index === 0 && <span className="rounded-full bg-[#fff4be] px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-[#775d00]">Ostatnia</span>}
+                                </div>
+                                <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-sm text-muted-foreground">
+                                    <span className="flex items-center gap-1.5"><CalendarDays className="size-4" /> {formatDate(inventory.date)}</span>
+                                    <span className="flex items-center gap-1.5"><PackageSearch className="size-4" /> {inventory.itemCount ?? 0} pozycji</span>
+                                </div>
+                            </div>
+
+                            <div className="mt-6 grid grid-cols-[1fr_auto] gap-2">
+                                <Button asChild size="lg">
+                                    <Link to={`/inventory/${inventory.id}/positions`}>Otwórz liczenie</Link>
+                                </Button>
+                                <Button asChild variant="outline" size="lg" aria-label={`Podsumowanie ${inventory.name}`}>
+                                    <Link to={`/inventory/${inventory.id}/summary`}><FileText /></Link>
+                                </Button>
+                            </div>
+                        </article>
+                    ))}
+                </div>
+            )}
         </div>
-    )
+    );
 }
 
 export default InventoryPage;
