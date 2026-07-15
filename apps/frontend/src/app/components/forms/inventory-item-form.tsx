@@ -20,6 +20,7 @@ type InventoryItemFormProps = {
   onSubmit: (data: CreateInventoryItem) => void;
   onCancel?: () => void;
   onProductNotFound?: (code: string) => void;
+  onCreateProduct?: () => void;
   initialProductCode?: string;
   onInitialProductSelected?: () => void;
 };
@@ -35,6 +36,7 @@ export function InventoryItemForm({
   onSubmit,
   onCancel,
   onProductNotFound,
+  onCreateProduct,
   initialProductCode,
   onInitialProductSelected,
 }: InventoryItemFormProps) {
@@ -123,6 +125,10 @@ export function InventoryItemForm({
       setError("Ilość musi być większa od zera.");
       return;
     }
+    if (selectedProduct?.unit === "PIECE" && !Number.isInteger(numericQuantity)) {
+      setError("Dla produktów liczonych w sztukach podaj liczbę całkowitą.");
+      return;
+    }
 
     localStorage.setItem("inventory:last-room", roomId);
     setError("");
@@ -174,6 +180,11 @@ export function InventoryItemForm({
             )}
           </div>
         )}
+        {onCreateProduct && !editingItem && (
+          <Button type="button" variant="outline" className="mt-2 w-full" onClick={onCreateProduct}>
+            <Plus /> Dodaj nowy produkt
+          </Button>
+        )}
       </div>
 
       <div>
@@ -198,8 +209,8 @@ export function InventoryItemForm({
           <Input
             id="quantity"
             type="number"
-            inputMode="decimal"
-            min="0.001"
+            inputMode={selectedProduct?.unit === "PIECE" ? "numeric" : "decimal"}
+            min={selectedProduct?.unit === "PIECE" ? "1" : "0.001"}
             step={selectedProduct?.unit === "PIECE" ? "1" : "0.001"}
             value={quantity}
             onChange={(event) => setQuantity(event.target.value)}

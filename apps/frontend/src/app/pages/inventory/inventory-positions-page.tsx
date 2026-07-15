@@ -35,6 +35,7 @@ export function InventoryPositionsPage() {
   const [entryVersion, setEntryVersion] = useState(0);
   const [savedMessage, setSavedMessage] = useState("");
   const [quickProductCode, setQuickProductCode] = useState("");
+  const [isQuickProductDialogOpen, setIsQuickProductDialogOpen] = useState(false);
   const [quickAddedProduct, setQuickAddedProduct] = useState<Product | null>(null);
   const [productCodeToSelect, setProductCodeToSelect] = useState("");
 
@@ -47,8 +48,12 @@ export function InventoryPositionsPage() {
     if (!requestedProductCode || isLoadingProducts) return;
     const existingProduct = products.find((product) => normalizedProductCode(product.code) === normalizedProductCode(requestedProductCode));
 
-    if (existingProduct) setProductCodeToSelect(existingProduct.code);
-    else setQuickProductCode(requestedProductCode);
+    if (existingProduct) {
+      setProductCodeToSelect(existingProduct.code);
+    } else {
+      setQuickProductCode(requestedProductCode);
+      setIsQuickProductDialogOpen(true);
+    }
 
     const nextParams = new URLSearchParams(searchParams);
     nextParams.delete("code");
@@ -105,11 +110,23 @@ export function InventoryPositionsPage() {
       onSuccess: (product) => {
         setQuickAddedProduct(product);
         setProductCodeToSelect(product.code);
+        setIsQuickProductDialogOpen(false);
         setQuickProductCode("");
         setSavedMessage("Produkt dodany do katalogu");
         window.setTimeout(() => setSavedMessage(""), 2200);
       },
     });
+  };
+
+  const openQuickProductDialog = (code = "") => {
+    createProductMutation.reset();
+    setQuickProductCode(code);
+    setIsQuickProductDialogOpen(true);
+  };
+
+  const closeQuickProductDialog = () => {
+    setIsQuickProductDialogOpen(false);
+    setQuickProductCode("");
   };
 
   const isLoading = isLoadingInventory || isLoadingItems || isLoadingProducts;
@@ -134,7 +151,10 @@ export function InventoryPositionsPage() {
       {(availableProducts.length === 0 || rooms.length === 0) && !isLoading && (
         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
           <p className="font-bold">Zanim zaczniesz liczenie, uzupełnij dane podstawowe.</p>
-          <p className="mt-1">Potrzebujesz co najmniej jednego <Link className="font-bold underline" to="/products">produktu</Link> i jednej <Link className="font-bold underline" to="/rooms">strefy sklepu</Link>.</p>
+          <p className="mt-1">
+            {availableProducts.length === 0 && "Pierwszy produkt możesz dodać bezpośrednio w formularzu poniżej. "}
+            {rooms.length === 0 && <>Dodaj co najmniej jedną <Link className="font-bold underline" to="/rooms">strefę sklepu</Link>.</>}
+          </p>
         </div>
       )}
 
@@ -154,7 +174,8 @@ export function InventoryPositionsPage() {
             rooms={rooms}
             isPending={createInventoryMutation.isPending}
             onSubmit={handleCreate}
-            onProductNotFound={setQuickProductCode}
+            onProductNotFound={openQuickProductDialog}
+            onCreateProduct={() => openQuickProductDialog()}
             initialProductCode={productCodeToSelect}
             onInitialProductSelected={() => setProductCodeToSelect("")}
           />
@@ -241,16 +262,20 @@ export function InventoryPositionsPage() {
             isPending={updateInventoryMutation.isPending}
             onSubmit={handleUpdate}
             onCancel={() => setEditingItem(null)}
-            onProductNotFound={setQuickProductCode}
+            onProductNotFound={openQuickProductDialog}
           />
         </DialogContent>
       </Dialog>
 
-      <Dialog open={Boolean(quickProductCode)} onOpenChange={(open) => !open && setQuickProductCode("")}>
+      <Dialog open={isQuickProductDialogOpen} onOpenChange={(open) => !open && closeQuickProductDialog()}>
         <DialogContent className="max-h-[90dvh] overflow-y-auto rounded-[24px] sm:max-w-xl">
           <DialogHeader>
-            <DialogTitle className="text-2xl">Dodaj zeskanowany produkt</DialogTitle>
-            <DialogDescription>Kod {quickProductCode} nie istnieje w katalogu. Uzupełnij dane, a produkt od razu wróci do formularza liczenia.</DialogDescription>
+            <DialogTitle className="text-2xl">{quickProductCode ? "Dodaj zeskanowany produkt" : "Dodaj nowy produkt"}</DialogTitle>
+            <DialogDescription>
+              {quickProductCode
+                ? `Kod ${quickProductCode} nie istnieje w katalogu. Uzupełnij dane, a produkt od razu wróci do formularza liczenia.`
+                : "Uzupełnij dane, a produkt zostanie od razu wybrany w formularzu liczenia."}
+            </DialogDescription>
           </DialogHeader>
           {catalogCategories.length === 0 ? (
             <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">Najpierw dodaj <Link className="font-bold underline" to="/categories">kategorię produktu</Link>.</div>
@@ -259,7 +284,7 @@ export function InventoryPositionsPage() {
               initialCode={quickProductCode}
               categories={catalogCategories}
               onSubmit={handleQuickProductCreate}
-              onCancel={() => setQuickProductCode("")}
+              onCancel={closeQuickProductDialog}
               isPending={createProductMutation.isPending}
             />
           )}
