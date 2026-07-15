@@ -1,4 +1,51 @@
-# 
+# DINO — Inwentaryzacja
+
+## Uruchomienie całej aplikacji w Dockerze
+
+Wymagany jest Docker z obsługą Compose. Frontend, backend, PostgreSQL i Adminer uruchamiają się z jednego pliku `compose.yml`.
+
+1. Przygotuj konfigurację:
+
+   ```sh
+   cp .env.example .env
+   ```
+
+   Przed użyciem poza lokalnym komputerem ustaw w `.env` własne, długie `JWT_SECRET` oraz mocne `POSTGRES_PASSWORD`.
+
+2. Zbuduj i uruchom cały stos:
+
+   ```sh
+   docker compose up -d --build
+   ```
+
+3. Otwórz:
+
+   - aplikację: `http://localhost:8080`
+   - panel bazy Adminer: `http://localhost:8081` (serwer: `db`)
+
+Backend nie jest wystawiany jako osobny port. Nginx przekazuje zapytania z `http://localhost:8080/api` bezpośrednio do kontenera backendu. Schemat Prisma jest synchronizowany automatycznie podczas jego startu.
+
+Przydatne polecenia:
+
+```sh
+docker compose ps
+docker compose logs -f backend frontend
+docker compose down
+```
+
+`docker compose down` zachowuje dane PostgreSQL. Polecenie `docker compose down -v` usuwa również wolumen i wszystkie dane.
+
+### Aktywacja konta pracownika
+
+Nowo zarejestrowane konto jest nieaktywne. Administrator może połączyć się przez Adminer i wykonać:
+
+```sql
+UPDATE "User"
+SET "isActive" = true
+WHERE email = 'pracownik@sklep.pl';
+```
+
+## Rozwój lokalny bez Dockera
 
 <a alt="Nx logo" href="https://nx.dev" target="_blank" rel="noreferrer"><img src="https://raw.githubusercontent.com/nrwl/nx/master/images/nx-logo.png" width="45"></a>
 

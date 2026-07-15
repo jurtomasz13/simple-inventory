@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig.app.json",
+  "compilerOptions": {
+    "composite": false,
+    "declaration": false,
+    "declarationMap": false,
+    "emitDeclarationOnly": false,
+    "importHelpers": false,
+    "isolatedModules": false,
+    "noEmit": false,
+    "outDir": "./dist-container",
+    "sourceMap": false,
+    "tsBuildInfoFile": null
+  }
+}
