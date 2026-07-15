@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "../components/ui/button";
+import { useAuth } from "../auth/auth-context";
 
 const formatDate = (value: string) =>
   new Intl.DateTimeFormat("pl-PL", {
@@ -23,6 +24,7 @@ const formatDate = (value: string) =>
   }).format(new Date(value));
 
 export function HomePage() {
+  const { user } = useAuth();
   const { data: inventories = [] } = useInventories();
   const { data: products = [] } = useProducts();
   const { data: rooms = [] } = useRooms();
@@ -38,7 +40,7 @@ export function HomePage() {
               Stanowisko gotowe
             </div>
             <h1 className="text-3xl font-black tracking-[-0.035em] sm:text-4xl">
-              Dzień dobry! Co dziś liczymy?
+              Dzień dobry{user?.name ? `, ${user.name.split(/\s+/)[0]}` : ""}! Co dziś liczymy?
             </h1>
             <p className="mt-3 max-w-xl text-base leading-relaxed text-white/70 sm:text-lg">
               Rozpocznij nowy arkusz albo wróć do ostatniej inwentaryzacji. Wszystkie zmiany zapisują się od razu.

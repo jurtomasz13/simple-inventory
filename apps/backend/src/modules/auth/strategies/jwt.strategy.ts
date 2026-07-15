@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { UserDto } from '../../user/dto/user.dto';
@@ -17,6 +17,12 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(payload: JwtPayload): Promise<UserDto> {
-    return this.userService.findOneByEmail(payload.email);
+    const user = await this.userService.findOneByEmail(payload.email);
+
+    if (!user.isActive) {
+      throw new UnauthorizedException('Konto jest nieaktywne');
+    }
+
+    return user;
   }
 }

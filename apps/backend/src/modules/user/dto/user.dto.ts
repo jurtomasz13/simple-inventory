@@ -10,6 +10,7 @@ export class UserDto {
   id: string;
   email: string;
   name: string;
+  isActive: boolean;
 
   @Exclude({ toPlainOnly: true })
   password: string;

@@ -1,5 +1,7 @@
-import { ClipboardList, Home, MapPin, ReceiptText, ScanBarcode, Tag } from "lucide-react";
-import { Link, NavLink } from "react-router-dom";
+import { useAuth } from "@/app/auth/auth-context";
+import { Button } from "@/app/components/ui/button";
+import { ClipboardList, Home, LogOut, MapPin, ReceiptText, ScanBarcode, Tag } from "lucide-react";
+import { Link, NavLink, useNavigate } from "react-router-dom";
 
 const navigationItems = [
   { to: "/", label: "Start", icon: Home, end: true },
@@ -11,6 +13,20 @@ const navigationItems = [
 ];
 
 export default function Navigation() {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const initials = user?.name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toLocaleUpperCase("pl"))
+    .join("") || "U";
+
+  const handleLogout = () => {
+    logout();
+    navigate("/login", { replace: true });
+  };
+
   return (
     <header className="sticky top-0 z-40 border-b border-black/5 bg-white/95 shadow-[0_1px_0_rgba(0,0,0,0.04)] backdrop-blur">
       <div className="mx-auto flex max-w-[1440px] items-center gap-5 px-4 py-3 sm:px-6 lg:px-8">
@@ -42,12 +58,13 @@ export default function Navigation() {
           ))}
         </nav>
 
-        <div className="hidden shrink-0 items-center gap-3 border-l pl-5 lg:flex">
-          <div className="grid size-10 place-items-center rounded-full bg-slate-900 text-sm font-bold text-white">PS</div>
-          <div className="leading-tight">
-            <p className="text-sm font-semibold">Pracownik sklepu</p>
-            <p className="text-xs text-muted-foreground">Stanowisko 01</p>
+        <div className="flex shrink-0 items-center gap-2 border-l pl-3 lg:gap-3 lg:pl-5">
+          <div className="grid size-10 place-items-center rounded-full bg-slate-900 text-sm font-bold text-white">{initials}</div>
+          <div className="hidden max-w-40 leading-tight xl:block">
+            <p className="truncate text-sm font-semibold">{user?.name}</p>
+            <p className="truncate text-xs text-muted-foreground">{user?.email}</p>
           </div>
+          <Button type="button" variant="ghost" size="icon" onClick={handleLogout} aria-label="Wyloguj się" title="Wyloguj się"><LogOut /></Button>
         </div>
       </div>
     </header>

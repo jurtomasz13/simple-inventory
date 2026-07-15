@@ -18,9 +18,10 @@ export class UserService extends PrismaMapperBase<User, UserDto> {
 
     const userEntity = await this.prisma.user.create({
       data: {
-        email: createUserDto.email,
+        email: createUserDto.email.trim().toLowerCase(),
         password: hashedPassword,
-        name: createUserDto.name,
+        name: createUserDto.name.trim(),
+        isActive: false,
       },
     });
 
@@ -43,7 +44,7 @@ export class UserService extends PrismaMapperBase<User, UserDto> {
 
   async findOneByEmail(email: string): Promise<UserDto> {
     return this.findOne({
-      where: { email },
+      where: { email: email.trim().toLowerCase() },
     });
   }
 
