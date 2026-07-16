@@ -44,7 +44,7 @@ export function InventoryForm({ editingInventory, onSubmit, onCancel, isPending 
     return (
         <form onSubmit={handleSubmit((data) => onSubmit(data, isEditing))} className="space-y-5">
             <div>
-                <Label htmlFor="inventory-name" className="mb-2">Nazwa arkusza</Label>
+                <Label htmlFor="inventory-name" className="mb-2">Nazwa inwentaryzacji</Label>
                 <Input
                     id="inventory-name"
                     autoFocus
@@ -55,7 +55,7 @@ export function InventoryForm({ editingInventory, onSubmit, onCancel, isPending 
             </div>
 
             <div>
-                <Label htmlFor="inventory-date" className="mb-2">Data liczenia</Label>
+                <Label htmlFor="inventory-date" className="mb-2">Data inwentaryzacji</Label>
                 <Input id="inventory-date" type="date" {...register("date")} />
                 {errors.date && <p className="mt-1.5 text-sm text-destructive">{errors.date.message}</p>}
             </div>

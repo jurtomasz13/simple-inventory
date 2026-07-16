@@ -2,6 +2,7 @@ import { lazy, Suspense } from "react";
 import { Navigate, Route, Routes as RouterRoutes } from "react-router-dom";
 import { AnonymousOnly, RequireAuth } from "./auth/auth-routes";
 import { MainLayout } from "./components/layouts/main-layout";
+import { LoadingState } from "./components/loading-state";
 
 const AuthPage = lazy(() => import("./pages/auth-page"));
 const HomePage = lazy(() => import("./pages/home-page"));
@@ -14,7 +15,7 @@ const InventorySummaryPage = lazy(() => import("./pages/inventory/inventory-summ
 const InventoryPositionsPage = lazy(() => import("./pages/inventory/inventory-positions-page"));
 
 const page = (element: React.ReactNode) => (
-  <Suspense fallback={<div className="h-72 animate-pulse rounded-[28px] border bg-white/60" />}>
+  <Suspense fallback={<LoadingState title="Otwieranie widoku" description="Przygotowuję ekran i jego narzędzia…" />}>
     {element}
   </Suspense>
 );

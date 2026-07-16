@@ -82,17 +82,17 @@ export function OrderForm({ inventoryId, products, editingOrder, isPending, onSu
     setProductQuery(code);
     setIsProductListOpen(false);
     setMissingCode(code);
-    setError("Tego produktu nie ma w policzonych pozycjach. Najpierw dodaj go do inwentaryzacji, a potem wróć do paragonu.");
+    setError("Tego produktu nie ma w pozycjach inwentaryzacji. Najpierw dodaj go do inwentaryzacji, a potem wróć do paragonu.");
   };
 
   const addLine = () => {
     const numericQuantity = Number(quantity.replace(",", "."));
     if (!selectedProduct || !Number.isFinite(numericQuantity) || numericQuantity <= 0) {
-      setError("Wybierz policzony produkt i podaj ilość większą od zera.");
+      setError("Wybierz produkt z inwentaryzacji i podaj ilość większą od zera.");
       return;
     }
     if (selectedProduct.unit === "PIECE" && !Number.isInteger(numericQuantity)) {
-      setError("Dla produktów liczonych w sztukach podaj liczbę całkowitą.");
+      setError("Dla produktów w jednostce „sztuki” podaj liczbę całkowitą.");
       return;
     }
     setLines((current) => {
@@ -116,7 +116,7 @@ export function OrderForm({ inventoryId, products, editingOrder, isPending, onSu
     event.preventDefault();
     if (name.trim().length < 2) return setError("Nadaj paragonowi krótką nazwę lub numer.");
     if (lines.length === 0 || lines.some((line) => line.quantity <= 0)) return setError("Paragon musi zawierać co najmniej jedną poprawną pozycję.");
-    if (lines.some((line) => line.product.unit === "PIECE" && !Number.isInteger(line.quantity))) return setError("Ilości produktów liczonych w sztukach muszą być liczbami całkowitymi.");
+    if (lines.some((line) => line.product.unit === "PIECE" && !Number.isInteger(line.quantity))) return setError("Ilości produktów w jednostce „sztuki” muszą być liczbami całkowitymi.");
     onSubmit({
       name: name.trim(),
       inventoryId,
@@ -134,7 +134,7 @@ export function OrderForm({ inventoryId, products, editingOrder, isPending, onSu
           <Search className="pointer-events-none absolute left-4 top-1/2 z-10 size-5 -translate-y-1/2 text-muted-foreground" />
           <Input id="receipt-product" value={productQuery} onChange={(event) => { setProductQuery(event.target.value); setSelectedProductId(""); setMissingCode(""); setIsProductListOpen(true); }} onFocus={() => setIsProductListOpen(true)} onBlur={() => window.setTimeout(() => setIsProductListOpen(false), 120)} onKeyDown={handleProductKeyDown} autoComplete="off" placeholder="Skanuj kod lub wpisz nazwę" className="pl-12 pr-14" />
           <BarcodeScannerButton onDetected={handleScan} iconOnly label="Skanuj produkt z paragonu" className="absolute right-1 top-1/2 -translate-y-1/2 border-0 bg-transparent shadow-none" />
-          {isProductListOpen && <div className="absolute z-30 mt-2 max-h-64 w-full overflow-auto rounded-2xl border bg-white p-1.5 shadow-xl">{matchingProducts.length ? matchingProducts.map((product) => <button key={product.id} type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => selectProduct(product)} className="flex min-h-14 w-full items-center justify-between gap-3 rounded-xl px-3 text-left hover:bg-muted"><span className="min-w-0"><span className="block truncate text-sm font-semibold">{product.name}</span><span className="block text-xs text-muted-foreground">{product.code}</span></span><span className="rounded-lg bg-muted px-2 py-1 text-xs font-bold">{unitLabels[product.unit]}</span></button>) : <p className="px-4 py-5 text-center text-sm text-muted-foreground">Produkt nie został policzony w tej inwentaryzacji.</p>}</div>}
+          {isProductListOpen && <div className="absolute z-30 mt-2 max-h-64 w-full overflow-auto rounded-2xl border bg-white p-1.5 shadow-xl">{matchingProducts.length ? matchingProducts.map((product) => <button key={product.id} type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => selectProduct(product)} className="flex min-h-14 w-full items-center justify-between gap-3 rounded-xl px-3 text-left hover:bg-muted"><span className="min-w-0"><span className="block truncate text-sm font-semibold">{product.name}</span><span className="block text-xs text-muted-foreground">{product.code}</span></span><span className="rounded-lg bg-muted px-2 py-1 text-xs font-bold">{unitLabels[product.unit]}</span></button>) : <p className="px-4 py-5 text-center text-sm text-muted-foreground">Produkt nie znajduje się w tej inwentaryzacji.</p>}</div>}
         </div>
         <div className="mt-2 grid grid-cols-[1fr_auto] gap-2"><Input type="number" inputMode={selectedProduct?.unit === "PIECE" ? "numeric" : "decimal"} min={selectedProduct?.unit === "PIECE" ? "1" : "0.001"} step={selectedProduct?.unit === "PIECE" ? "1" : "0.001"} value={quantity} onChange={(event) => setQuantity(event.target.value)} aria-label="Ilość sprzedana" /><Button type="button" onClick={addLine}><Plus /> Dodaj</Button></div>
       </div>
@@ -144,7 +144,7 @@ export function OrderForm({ inventoryId, products, editingOrder, isPending, onSu
         {lines.length === 0 ? <div className="rounded-2xl border border-dashed p-5 text-center text-sm text-muted-foreground"><ReceiptText className="mx-auto mb-2 size-6" />Dodaj produkty kupione przez klienta.</div> : <div className="space-y-2">{lines.map((line) => <div key={line.product.id} className="grid grid-cols-[minmax(0,1fr)_112px_44px] items-center gap-2 rounded-2xl border bg-white p-2.5"><div className="min-w-0 pl-1"><p className="truncate text-sm font-bold">{line.product.name}</p><p className="text-xs text-muted-foreground">{line.product.code} · {formatQuantity(line.quantity, line.product.unit)}</p></div><div className="grid grid-cols-[32px_1fr_32px] items-center"><Button type="button" variant="ghost" size="icon" className="size-8" onClick={() => updateLineQuantity(line.product.id, String(Math.max(line.product.unit === "PIECE" ? 1 : 0.001, Math.round((line.quantity - (line.product.unit === "PIECE" ? 1 : 0.1)) * 1000) / 1000)))}><Minus /></Button><Input type="number" inputMode={line.product.unit === "PIECE" ? "numeric" : "decimal"} min={line.product.unit === "PIECE" ? "1" : "0.001"} step={line.product.unit === "PIECE" ? "1" : "0.001"} value={line.quantity} onChange={(event) => updateLineQuantity(line.product.id, event.target.value)} className="h-9 px-1 text-center text-sm font-bold" /><Button type="button" variant="ghost" size="icon" className="size-8" onClick={() => updateLineQuantity(line.product.id, String(Math.round((line.quantity + (line.product.unit === "PIECE" ? 1 : 0.1)) * 1000) / 1000))}><Plus /></Button></div><Button type="button" variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive" onClick={() => setLines((current) => current.filter((item) => item.product.id !== line.product.id))}><Trash2 /></Button></div>)}</div>}
       </div>
 
-      {error && <div className="rounded-xl bg-red-50 px-3 py-2.5 text-sm font-medium text-red-800"><p>{error}</p>{missingCode && <Link className="mt-2 inline-flex min-h-9 items-center rounded-lg bg-white px-3 font-bold underline" to={`/inventory/${inventoryId}/positions?code=${encodeURIComponent(missingCode)}`}>Przejdź do liczenia kodu {missingCode}</Link>}</div>}
+      {error && <div className="rounded-xl bg-red-50 px-3 py-2.5 text-sm font-medium text-red-800"><p>{error}</p>{missingCode && <Link className="mt-2 inline-flex min-h-9 items-center rounded-lg bg-white px-3 font-bold underline" to={`/inventory/${inventoryId}/positions?code=${encodeURIComponent(missingCode)}`}>Przejdź do pozycji produktu o kodzie {missingCode}</Link>}</div>}
       <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">{onCancel && <Button type="button" variant="outline" onClick={onCancel} disabled={isPending}>Anuluj</Button>}<Button type="submit" size="lg" className={onCancel ? "" : "w-full"} disabled={isPending || products.length === 0}>{isPending ? "Zapisywanie…" : editingOrder ? "Zapisz paragon" : "Zarejestruj sprzedaż"}</Button></div>
     </form>
   );

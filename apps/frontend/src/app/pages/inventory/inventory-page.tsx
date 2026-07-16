@@ -5,6 +5,7 @@ import { Dialog, DialogTrigger, DialogContent, DialogTitle, DialogDescription, D
 import type { Inventory } from "@/api/inventories";
 import { useInventoryMutations, useInventories } from "@/hooks/inventories";
 import { InventoryForm, type InventoryFormValues } from "@/app/components/forms/inventory-form";
+import { LoadingState } from "@/app/components/loading-state";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 
 const formatDate = (date: string) =>
@@ -56,12 +57,12 @@ export function InventoryPage() {
     };
 
     return (
-        <div className="space-y-6">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div className="app-page space-y-6">
+            <div className="app-page-header flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                 <div>
-                    <p className="text-xs font-bold uppercase tracking-[0.14em] text-primary">Arkusze robocze</p>
+                    <p className="text-xs font-bold uppercase tracking-[0.14em] text-primary">Inwentaryzacje</p>
                     <h1 className="mt-1 text-3xl font-black tracking-[-0.035em] sm:text-4xl">Inwentaryzacje</h1>
-                    <p className="mt-2 max-w-2xl text-muted-foreground">Wybierz arkusz i kontynuuj liczenie albo rozpocznij nową inwentaryzację.</p>
+                    <p className="mt-2 max-w-2xl text-muted-foreground">Wybierz inwentaryzację i kontynuuj dodawanie pozycji albo rozpocznij nową.</p>
                 </div>
 
                 <Dialog open={isDialogOpen} onOpenChange={(open) => open ? setIsDialogOpen(true) : closeDialog()}>
@@ -71,11 +72,11 @@ export function InventoryPage() {
                             Nowa inwentaryzacja
                         </Button>
                     </DialogTrigger>
-                    <DialogContent className="rounded-[24px] sm:max-w-xl">
+                    <DialogContent className="rounded-xl sm:max-w-xl">
                         <DialogHeader>
-                            <DialogTitle className="text-2xl">{editingInventory ? "Edytuj arkusz" : "Nowa inwentaryzacja"}</DialogTitle>
+                            <DialogTitle className="text-2xl">{editingInventory ? "Edytuj inwentaryzację" : "Nowa inwentaryzacja"}</DialogTitle>
                             <DialogDescription>
-                                {editingInventory ? "Zmień nazwę lub datę arkusza." : "Nadaj nazwę arkuszowi. Po zapisaniu od razu przejdziesz do liczenia."}
+                                {editingInventory ? "Zmień nazwę lub datę inwentaryzacji." : "Nadaj nazwę inwentaryzacji. Po zapisaniu od razu przejdziesz do jej pozycji."}
                             </DialogDescription>
                         </DialogHeader>
                         <InventoryForm
@@ -95,22 +96,20 @@ export function InventoryPage() {
             )}
 
             {isLoading ? (
-                <div className="grid gap-4 md:grid-cols-2">
-                    {[0, 1, 2, 3].map((item) => <div key={item} className="h-56 animate-pulse rounded-[24px] border bg-white/60" />)}
-                </div>
+                <LoadingState variant="cards" count={4} title="Wczytywanie inwentaryzacji" description="Pobieram inwentaryzacje i liczbę zapisanych pozycji…" />
             ) : inventories.length === 0 ? (
-                <div className="rounded-[28px] border border-dashed bg-white px-6 py-16 text-center">
+                <div className="rounded-xl border border-dashed bg-white px-6 py-16 text-center">
                     <div className="mx-auto grid size-14 place-items-center rounded-2xl bg-[#e8f3ed] text-primary">
                         <ClipboardList className="size-7" />
                     </div>
-                    <h2 className="mt-5 text-xl font-bold">Nie ma jeszcze żadnego arkusza</h2>
-                    <p className="mx-auto mt-2 max-w-md text-muted-foreground">Utwórz pierwszą inwentaryzację i zacznij dodawać policzone produkty.</p>
-                    <Button className="mt-6" size="lg" onClick={() => setIsDialogOpen(true)}><Plus /> Utwórz arkusz</Button>
+                    <h2 className="mt-5 text-xl font-bold">Nie ma jeszcze żadnej inwentaryzacji</h2>
+                    <p className="mx-auto mt-2 max-w-md text-muted-foreground">Utwórz pierwszą inwentaryzację i zacznij dodawać produkty.</p>
+                    <Button className="mt-6" size="lg" onClick={() => setIsDialogOpen(true)}><Plus /> Utwórz inwentaryzację</Button>
                 </div>
             ) : (
-                <div className="grid gap-4 md:grid-cols-2">
+                <div className="app-inventory-grid grid gap-4 md:grid-cols-2">
                     {inventories.map((inventory, index) => (
-                        <article key={inventory.id} className="group rounded-[24px] border bg-white p-5 shadow-sm transition hover:border-primary/30 hover:shadow-md sm:p-6">
+                        <article key={inventory.id} className="app-entity-card group rounded-xl border bg-white p-5 shadow-sm transition hover:border-primary/30 hover:shadow-md sm:p-6">
                             <div className="flex items-start justify-between gap-4">
                                 <div className="grid size-12 shrink-0 place-items-center rounded-2xl bg-[#e8f3ed] text-primary">
                                     <FileText className="size-6" />
@@ -128,7 +127,7 @@ export function InventoryPage() {
                             <div className="mt-5">
                                 <div className="flex flex-wrap items-center gap-2">
                                     <h2 className="text-xl font-bold tracking-tight">{inventory.name}</h2>
-                                    {index === 0 && <span className="rounded-full bg-[#fff4be] px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-[#775d00]">Ostatnia</span>}
+                                    {index === 0 && <span className="rounded-md bg-[#fff4be] px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-[#775d00]">Ostatnia</span>}
                                 </div>
                                 <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-sm text-muted-foreground">
                                     <span className="flex items-center gap-1.5"><CalendarDays className="size-4" /> {formatDate(inventory.date)}</span>
@@ -138,7 +137,7 @@ export function InventoryPage() {
 
                             <div className="mt-6 grid grid-cols-[1fr_auto] gap-2">
                                 <Button asChild size="lg">
-                                    <Link to={`/inventory/${inventory.id}/positions`}>Otwórz liczenie</Link>
+                                    <Link to={`/inventory/${inventory.id}/positions`}>Otwórz pozycje</Link>
                                 </Button>
                                 <Button asChild variant="outline" size="lg" aria-label={`Podsumowanie ${inventory.name}`}>
                                     <Link to={`/inventory/${inventory.id}/summary`}><FileText /></Link>

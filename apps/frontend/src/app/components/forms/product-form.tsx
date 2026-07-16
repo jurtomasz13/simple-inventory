@@ -102,11 +102,12 @@ export function ProductForm({ editingProduct, initialCode = "", categories, onSu
                         <Select
                             value={field.value}
                             onValueChange={field.onChange}
+                            disabled={categories.length === 0}
                         >
-                        <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Wybierz kategorię" />
+                        <SelectTrigger className="w-full" title={categories.length === 0 ? "Brak kategorii — dodaj ją najpierw" : undefined}>
+                            {categories.length === 0 ? <span className="truncate">Brak kategorii</span> : <SelectValue placeholder="Wybierz kategorię" />}
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent isEmpty={categories.length === 0} emptyMessage="Brak kategorii — dodaj ją najpierw">
                             {categories.map((category) => (
                                 <SelectItem key={category.id} value={category.id} className="cursor-pointer">
                                     {category.name}

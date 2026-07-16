@@ -126,7 +126,7 @@ export function InventoryItemForm({
       return;
     }
     if (selectedProduct?.unit === "PIECE" && !Number.isInteger(numericQuantity)) {
-      setError("Dla produktów liczonych w sztukach podaj liczbę całkowitą.");
+      setError("Dla produktów w jednostce „sztuki” podaj liczbę całkowitą.");
       return;
     }
 
@@ -156,7 +156,7 @@ export function InventoryItemForm({
             placeholder="Skanuj kod lub wpisz nazwę"
             className="h-14 pl-12 pr-14 text-base font-medium"
           />
-          <BarcodeScannerButton onDetected={handleScan} iconOnly label="Skanuj kod produktu" className="absolute right-1.5 top-1.5 border-0 bg-transparent shadow-none" />
+          <BarcodeScannerButton onDetected={handleScan} iconOnly label="Skanuj kod produktu" className="absolute right-1.5 top-1/2 -translate-y-1/2 border-0 bg-transparent shadow-none" />
         </div>
 
         {isProductListOpen && (
@@ -189,11 +189,11 @@ export function InventoryItemForm({
 
       <div>
         <Label htmlFor="room" className="mb-2">Strefa sklepu</Label>
-        <Select value={roomId || undefined} onValueChange={setRoomId}>
-          <SelectTrigger id="room" className="h-14 w-full">
-            <SelectValue placeholder="Wybierz miejsce liczenia" />
+        <Select value={roomId || undefined} onValueChange={setRoomId} disabled={rooms.length === 0}>
+          <SelectTrigger id="room" className="h-14 w-full" title={rooms.length === 0 ? "Brak stref — dodaj ją najpierw" : undefined}>
+            {rooms.length === 0 ? <span className="truncate">Brak stref</span> : <SelectValue placeholder="Wybierz strefę produktu" />}
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent isEmpty={rooms.length === 0} emptyMessage="Brak stref — dodaj ją najpierw">
             {rooms.map((room) => <SelectItem key={room.id} value={room.id}>{room.name}</SelectItem>)}
           </SelectContent>
         </Select>
@@ -201,7 +201,7 @@ export function InventoryItemForm({
 
       <div>
         <div className="mb-2 flex items-center justify-between">
-          <Label htmlFor="quantity" className="mb-0">Policzona ilość</Label>
+          <Label htmlFor="quantity" className="mb-0">Ilość w inwentaryzacji</Label>
           {selectedProduct && <span className="text-xs font-bold text-primary">Jednostka: {unitLabels[selectedProduct.unit]}</span>}
         </div>
         <div className="grid grid-cols-[56px_1fr_56px] gap-2">
@@ -225,7 +225,7 @@ export function InventoryItemForm({
       <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
         {onCancel && <Button type="button" variant="outline" onClick={onCancel} disabled={isPending}>Anuluj</Button>}
         <Button type="submit" size="lg" className={onCancel ? "" : "w-full"} disabled={isPending || products.length === 0 || rooms.length === 0}>
-          {isPending ? "Zapisywanie…" : editingItem ? "Zapisz pozycję" : "Dodaj policzoną pozycję"}
+          {isPending ? "Zapisywanie…" : editingItem ? "Zapisz pozycję" : "Dodaj pozycję"}
         </Button>
       </div>
     </form>

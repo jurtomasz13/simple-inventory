@@ -36,32 +36,32 @@ export function AuthPage() {
   const [registeredEmail, setRegisteredEmail] = useState("");
 
   return (
-    <main className="min-h-screen bg-[#f5f6f2] lg:grid lg:grid-cols-[minmax(360px,0.85fr)_minmax(540px,1.15fr)]">
+    <main className="app-auth min-h-screen bg-[#f5f6f2] lg:grid lg:grid-cols-[minmax(360px,0.85fr)_minmax(540px,1.15fr)]">
       <section className="relative hidden overflow-hidden bg-[#173b2d] p-10 text-white lg:flex lg:flex-col lg:justify-between xl:p-14">
         <div className="absolute -right-32 -top-32 size-96 rounded-full bg-[#ffdc24]/10" />
         <div className="absolute -bottom-70 -left-28 size-[30rem] rounded-full border-[80px] border-white/[0.035]" />
         <img src="/dino-logo.svg" alt="DINO" className="relative w-32 rounded-xl bg-white px-3 py-2" />
         <div className="relative max-w-lg">
           <p className="text-xs font-black uppercase tracking-[0.18em] text-[#ffdc24]">Inwentaryzacja sklepu</p>
-          <h1 className="mt-4 text-4xl font-black leading-tight tracking-[-0.04em] xl:text-5xl">Liczenie bez kartek i przepisywania.</h1>
-          <p className="mt-5 text-lg leading-8 text-white/65">Jedno bezpieczne konto pracownika przechowuje katalog, arkusze, paragony i raporty sklepu.</p>
+          <h1 className="mt-4 text-4xl font-black leading-tight tracking-[-0.04em] xl:text-5xl">Inwentaryzacja bez kartek i przepisywania.</h1>
+          <p className="mt-5 text-lg leading-8 text-white/65">Jedno bezpieczne konto pracownika przechowuje katalog, inwentaryzacje, paragony i raporty sklepu.</p>
           <div className="mt-9 space-y-3">
             <Feature icon={ScanBarcode} label="Skanowanie kodów na tablecie" />
-            <Feature icon={ClipboardCheck} label="Stan policzony i skorygowany o sprzedaż" />
+            <Feature icon={ClipboardCheck} label="Stan spisany i skorygowany o sprzedaż" />
             <Feature icon={ShieldCheck} label="Dostęp dopiero po akceptacji administratora" />
           </div>
         </div>
         <p className="relative text-xs text-white/40">Panel wewnętrzny · dostęp dla upoważnionych pracowników</p>
       </section>
 
-      <section className="grid min-h-screen place-items-center px-4 py-7 sm:px-8 lg:px-12">
-        <div className="w-full max-w-[520px]">
-          <div className="mb-7 flex items-center justify-between lg:hidden">
+      <section className="app-auth-main grid min-h-screen place-items-center px-4 py-7 sm:px-8 lg:px-12">
+        <div className="app-auth-wrap w-full max-w-[520px]">
+          <div className="app-auth-mobile-brand mb-7 flex items-center justify-between lg:hidden">
             <img src="/dino-logo.svg" alt="DINO" className="w-24" />
-            <span className="rounded-full bg-[#e8f3ed] px-3 py-1.5 text-xs font-bold text-primary">Panel sklepu</span>
+            <span className="rounded-md bg-[#e8f3ed] px-3 py-1.5 text-xs font-bold text-primary">Panel sklepu</span>
           </div>
 
-          <div className="overflow-hidden rounded-[28px] border bg-white shadow-[0_18px_55px_rgba(24,51,41,0.09)]">
+          <div className="app-auth-card overflow-hidden rounded-xl border bg-white shadow-[0_18px_55px_rgba(24,51,41,0.09)]">
             {registeredEmail ? (
               <RegistrationPending email={registeredEmail} onReturn={() => { setRegisteredEmail(""); setMode("login"); }} />
             ) : (
@@ -70,7 +70,7 @@ export function AuthPage() {
                   <button type="button" onClick={() => setMode("login")} className={`min-h-12 rounded-xl px-3 text-sm font-bold transition-colors ${mode === "login" ? "bg-white text-primary shadow-sm" : "text-muted-foreground"}`}>Logowanie</button>
                   <button type="button" onClick={() => setMode("register")} className={`min-h-12 rounded-xl px-3 text-sm font-bold transition-colors ${mode === "register" ? "bg-white text-primary shadow-sm" : "text-muted-foreground"}`}>Rejestracja</button>
                 </div>
-                <div className="p-5 sm:p-8">
+                <div className="app-auth-content p-5 sm:p-8">
                   {mode === "login" ? <LoginForm /> : <RegisterForm onRegistered={setRegisteredEmail} />}
                 </div>
               </>
@@ -112,11 +112,11 @@ function LoginForm() {
   };
 
   return (
-    <form onSubmit={handleSubmit(submit)} className="space-y-5">
+    <form onSubmit={handleSubmit(submit)} className="app-auth-form space-y-5">
       <div>
         <p className="text-xs font-black uppercase tracking-[0.15em] text-primary">Dostęp pracownika</p>
         <h2 className="mt-2 text-3xl font-black tracking-[-0.035em]">Zaloguj się</h2>
-        <p className="mt-2 text-sm leading-6 text-muted-foreground">Wróć do swoich arkuszy i kontynuuj liczenie.</p>
+        <p className="mt-2 text-sm leading-6 text-muted-foreground">Wróć do swoich inwentaryzacji i kontynuuj pracę.</p>
       </div>
 
       <Field label="Adres e-mail" error={errors.email?.message}>
@@ -172,7 +172,7 @@ function RegisterForm({ onRegistered }: { onRegistered: (email: string) => void 
   };
 
   return (
-    <form onSubmit={handleSubmit(submit)} className="space-y-5">
+    <form onSubmit={handleSubmit(submit)} className="app-auth-form space-y-5">
       <div>
         <p className="text-xs font-black uppercase tracking-[0.15em] text-primary">Nowy pracownik</p>
         <h2 className="mt-2 text-3xl font-black tracking-[-0.035em]">Utwórz konto</h2>
@@ -204,8 +204,8 @@ function RegisterForm({ onRegistered }: { onRegistered: (email: string) => void 
 
 function RegistrationPending({ email, onReturn }: { email: string; onReturn: () => void }) {
   return (
-    <div className="p-6 text-center sm:p-10">
-      <div className="mx-auto grid size-16 place-items-center rounded-[22px] bg-amber-100 text-amber-800"><Clock3 className="size-8" /></div>
+    <div className="app-auth-content p-6 text-center sm:p-10">
+      <div className="mx-auto grid size-16 place-items-center rounded-xl bg-amber-100 text-amber-800"><Clock3 className="size-8" /></div>
       <p className="mt-6 text-xs font-black uppercase tracking-[0.15em] text-amber-700">Oczekuje na akceptację</p>
       <h2 className="mt-2 text-3xl font-black tracking-[-0.035em]">Konto zostało utworzone</h2>
       <p className="mx-auto mt-3 max-w-sm text-sm leading-6 text-muted-foreground">Adres <strong className="text-foreground">{email}</strong> został zapisany, ale logowanie będzie możliwe dopiero po aktywacji konta przez administratora.</p>

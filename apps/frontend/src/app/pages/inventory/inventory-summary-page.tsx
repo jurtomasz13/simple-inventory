@@ -1,5 +1,6 @@
 import type { InventoryItem } from "@/api/inventory-items";
 import { Button } from "@/app/components/ui/button";
+import { LoadingState } from "@/app/components/loading-state";
 import { Checkbox } from "@/app/components/ui/checkbox";
 import { Input } from "@/app/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/app/components/ui/popover";
@@ -7,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useInventory } from "@/hooks/inventories";
 import { useInventoryItems } from "@/hooks/use-inventory-items";
 import { useOrders } from "@/hooks/orders";
+import { cn } from "@/utils/cn";
 import { formatQuantity, normalizeSearch, unitLabels } from "@/utils/inventory";
 import {
   buildInventoryReport,
@@ -18,11 +20,14 @@ import {
 } from "@/utils/inventory-report";
 import {
   ArrowDownAZ,
+  ArrowDown,
   ArrowLeft,
+  ArrowUp,
   ArrowUpAZ,
   AlertTriangle,
   Boxes,
   ChevronDown,
+  ChevronsUpDown,
   Download,
   Filter,
   Layers3,
@@ -157,9 +162,6 @@ export function InventorySummaryPage() {
   const activeFilterCount = categoryFilters.length + roomFilters.length + unitFilters.length
     + Number(Boolean(search)) + Number(productFilter !== "all") + Number(saleFilter !== "all") + Number(Boolean(minQuantity)) + Number(Boolean(maxQuantity));
 
-  const categoryDistribution = useMemo(() => createDistribution(filteredItems, "category"), [filteredItems]);
-  const roomDistribution = useMemo(() => createDistribution(filteredItems, "room"), [filteredItems]);
-
   const setSingleParam = (name: string, value: string, defaultValue = "") => {
     const next = new URLSearchParams(searchParams);
     if (!value || value === defaultValue) next.delete(name);
@@ -174,6 +176,19 @@ export function InventorySummaryPage() {
     setSearchParams(next, { replace: true });
   };
 
+  const setReportSort = (field: ReportSortField) => {
+    const next = new URLSearchParams(searchParams);
+    const nextDirection: ReportSortDirection = sortField === field
+      ? (sortDirection === "asc" ? "desc" : "asc")
+      : (field === "name" || field === "code" ? "asc" : "desc");
+
+    if (field === "name") next.delete("sort");
+    else next.set("sort", field);
+    if (nextDirection === "asc") next.delete("direction");
+    else next.set("direction", nextDirection);
+    setSearchParams(next, { replace: true });
+  };
+
   const resetFilters = () => {
     const next = new URLSearchParams();
     if (sortField !== "name") next.set("sort", sortField);
@@ -182,7 +197,7 @@ export function InventorySummaryPage() {
   };
 
   const downloadCsv = () => {
-    const header = ["Kategoria", "Jednostka", "Produkt", "Kod", "Strefy", "Policzono", "Sprzedano po przeliczeniu", "Po korekcie", "Liczba wpisów", "Liczba paragonów"];
+    const header = ["Kategoria", "Jednostka", "Produkt", "Kod", "Strefy", "Stan spisany", "Sprzedano po spisie", "Po korekcie", "Liczba wpisów", "Liczba paragonów"];
     const rows = report.flatMap((category) => category.units.flatMap((unit) =>
       unit.products.map((product) => [
         category.name,
@@ -208,29 +223,29 @@ export function InventorySummaryPage() {
   };
 
   if (isLoadingInventory || isLoadingItems || isLoadingOrders) {
-    return <div className="h-80 animate-pulse rounded-[28px] border bg-white/60" />;
+    return <LoadingState variant="workspace" count={4} title="Tworzenie podsumowania" description="Pobieram pozycje, paragony i przygotowuję raport…" />;
   }
 
   if (error || ordersError || !inventory) {
     return (
-      <div className="rounded-[24px] border border-red-200 bg-red-50 p-6 text-red-900">
+      <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-red-900">
         <h1 className="text-xl font-bold">Nie udało się otworzyć podsumowania</h1>
-        <p className="mt-2 text-sm">Arkusz nie istnieje albo serwer jest chwilowo niedostępny.</p>
+        <p className="mt-2 text-sm">Inwentaryzacja nie istnieje albo serwer jest chwilowo niedostępny.</p>
         <Button asChild variant="outline" className="mt-5"><Link to="/inventory"><ArrowLeft /> Wróć do listy</Link></Button>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 print:space-y-4">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+    <div className="app-page space-y-6 print:space-y-4">
+      <div className="app-page-header flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <Link to={`/inventory/${id}/positions`} className="mb-3 inline-flex min-h-10 items-center gap-2 rounded-lg text-sm font-semibold text-muted-foreground hover:text-foreground print:hidden">
-            <ArrowLeft className="size-4" /> Wróć do liczenia
+            <ArrowLeft className="size-4" /> Wróć do pozycji
           </Link>
           <p className="text-xs font-bold uppercase tracking-[0.14em] text-primary">Raport inwentaryzacji</p>
           <h1 className="mt-1 text-3xl font-black tracking-[-0.035em] sm:text-4xl">{inventory.name}</h1>
-          <p className="mt-2 text-muted-foreground">Arkusz z dnia {formatDate(inventory.date)} · grupowanie: kategoria → jednostka → produkt</p>
+          <p className="mt-2 text-muted-foreground">Inwentaryzacja z dnia {formatDate(inventory.date)} · grupowanie: kategoria → jednostka → produkt</p>
         </div>
         <div className="flex flex-col gap-2 sm:flex-row print:hidden">
           <Button asChild variant="outline" size="lg"><Link to={`/orders?inventory=${id}`}><ReceiptText /> Paragony ({orders.length})</Link></Button>
@@ -239,23 +254,23 @@ export function InventorySummaryPage() {
         </div>
       </div>
 
-      <section className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+      <section className="app-stat-grid grid grid-cols-2 gap-3 lg:grid-cols-5">
         <SummaryStat icon={PackageCheck} label={filteredItems.length === items.length ? "Wszystkie wpisy" : `Z ${items.length} wpisów`} value={String(filteredItems.length)} />
         <SummaryStat icon={Boxes} label="Różne produkty" value={String(uniqueProducts)} />
-        <SummaryStat icon={ReceiptText} label="Paragony po liczeniu" value={String(orders.length)} />
+        <SummaryStat icon={ReceiptText} label="Paragony po spisie" value={String(orders.length)} />
         <SummaryStat icon={Tag} label="Kategorie" value={String(uniqueCategories)} />
         <SummaryStat icon={Warehouse} label="Strefy" value={String(uniqueRooms)} />
       </section>
 
-      <section className="grid gap-3 sm:grid-cols-3">
+      <section className="app-balance-grid grid gap-3 sm:grid-cols-3">
         <BalanceStat icon={Boxes} label="Produkty na sztuki" unit="szt." balance={balanceTotals.PIECE} tone="yellow" />
         <BalanceStat icon={Scale} label="Produkty ważone" unit="kg" balance={balanceTotals.KILOGRAM} tone="green" />
         <BalanceStat icon={Scale} label="Produkty płynne" unit="l" balance={balanceTotals.LITER} tone="blue" />
       </section>
 
-      {report.some((category) => category.units.some((unit) => unit.products.some((product) => product.adjustedQuantity < 0))) && <div className="flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-900"><AlertTriangle className="mt-0.5 size-5 shrink-0" /><div><p className="font-bold">Sprzedaż przekracza policzony stan co najmniej jednego produktu.</p><p className="mt-1">Użyj filtra „Stan ujemny”, aby znaleźć pozycje wymagające sprawdzenia.</p></div></div>}
+      {report.some((category) => category.units.some((unit) => unit.products.some((product) => product.adjustedQuantity < 0))) && <div className="flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-900"><AlertTriangle className="mt-0.5 size-5 shrink-0" /><div><p className="font-bold">Sprzedaż przekracza stan spisany co najmniej jednego produktu.</p><p className="mt-1">Użyj filtra „Stan ujemny”, aby znaleźć pozycje wymagające sprawdzenia.</p></div></div>}
 
-      <section className="rounded-[24px] border bg-white p-4 shadow-sm print:hidden sm:p-5">
+      <section className="app-panel rounded-xl border bg-white p-4 shadow-sm print:hidden sm:p-5">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.12em] text-primary"><SlidersHorizontal className="size-4" /> Filtry raportu</p>
@@ -269,16 +284,18 @@ export function InventorySummaryPage() {
             <Search className="pointer-events-none absolute left-4 top-1/2 size-5 -translate-y-1/2 text-muted-foreground" />
             <Input value={search} onChange={(event) => setSingleParam("q", event.target.value)} placeholder="Produkt, kod lub strefa…" className="pl-12" />
           </div>
-          <MultiFilter label="Kategorie" values={categoryFilters} options={filterOptions.categories} onChange={(values) => setMultipleParams("category", values)} />
-          <MultiFilter label="Jednostki" values={unitFilters} options={filterOptions.units} onChange={(values) => setMultipleParams("unit", values)} />
-          <MultiFilter label="Strefy" values={roomFilters} options={filterOptions.rooms} onChange={(values) => setMultipleParams("room", values)} />
+          <MultiFilter label="Kategorie" emptyLabel="Brak kategorii" values={categoryFilters} options={filterOptions.categories} onChange={(values) => setMultipleParams("category", values)} />
+          <MultiFilter label="Jednostki" emptyLabel="Brak jednostek" values={unitFilters} options={filterOptions.units} onChange={(values) => setMultipleParams("unit", values)} />
+          <MultiFilter label="Strefy" emptyLabel="Brak stref" values={roomFilters} options={filterOptions.rooms} onChange={(values) => setMultipleParams("room", values)} />
         </div>
 
         <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(220px,1.2fr)_minmax(190px,0.8fr)_120px_120px_minmax(180px,0.8fr)_56px]">
-          <Select value={productFilter} onValueChange={(value) => setSingleParam("product", value, "all")}>
-            <SelectTrigger className="w-full"><SelectValue placeholder="Wszystkie produkty" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Wszystkie produkty</SelectItem>
+          <Select value={productFilter} onValueChange={(value) => setSingleParam("product", value, "all")} disabled={filterOptions.products.length === 0}>
+            <SelectTrigger className="w-full" title={filterOptions.products.length === 0 ? "Brak produktów w inwentaryzacji" : undefined}>
+              {filterOptions.products.length === 0 ? <span className="truncate">Brak produktów</span> : <SelectValue placeholder="Wszystkie produkty" />}
+            </SelectTrigger>
+            <SelectContent isEmpty={filterOptions.products.length === 0} emptyMessage="Brak produktów w inwentaryzacji">
+              {filterOptions.products.length > 0 && <SelectItem value="all">Wszystkie produkty</SelectItem>}
               {filterOptions.products.map((option) => <SelectItem key={option.value} value={option.value}>{option.label} ({option.count})</SelectItem>)}
             </SelectContent>
           </Select>
@@ -286,7 +303,7 @@ export function InventorySummaryPage() {
             <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Wszystkie stany sprzedaży</SelectItem>
-              <SelectItem value="affected">Sprzedane po przeliczeniu</SelectItem>
+              <SelectItem value="affected">Sprzedane po spisie</SelectItem>
               <SelectItem value="unaffected">Bez późniejszej sprzedaży</SelectItem>
               <SelectItem value="negative">Stan po korekcie ujemny</SelectItem>
             </SelectContent>
@@ -311,20 +328,25 @@ export function InventorySummaryPage() {
         </div>
       </section>
 
-      <section className="grid gap-5 lg:grid-cols-2">
-        <DistributionCard icon={MapPin} title="Wpisy według strefy" items={roomDistribution} />
-        <DistributionCard icon={Tag} title="Wpisy według kategorii" items={categoryDistribution} />
-      </section>
-
-      <section className="space-y-4">
+      <section className="app-report-list space-y-4">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div><p className="text-xs font-bold uppercase tracking-[0.12em] text-primary">Szczegółowy wykaz</p><h2 className="mt-1 text-2xl font-black">Kategorie i produkty</h2></div>
           <p className="text-sm font-medium text-muted-foreground">{report.length} kategorii · {uniqueProducts} produktów · {filteredItems.length} wpisów</p>
         </div>
 
+        <div className="flex items-center gap-1 overflow-x-auto border-y py-2 print:hidden lg:hidden">
+          <span className="mr-1 shrink-0 pl-1 text-xs font-bold text-muted-foreground">Sortuj:</span>
+          <ReportSortButton field="name" label="Produkt" activeField={sortField} direction={sortDirection} onChange={setReportSort} />
+          <ReportSortButton field="code" label="Kod" activeField={sortField} direction={sortDirection} onChange={setReportSort} />
+          <ReportSortButton field="rooms" label="Strefy" activeField={sortField} direction={sortDirection} onChange={setReportSort} />
+          <ReportSortButton field="quantity" label="Stan spisany" activeField={sortField} direction={sortDirection} onChange={setReportSort} />
+          <ReportSortButton field="sold" label="Sprzedano" activeField={sortField} direction={sortDirection} onChange={setReportSort} />
+          <ReportSortButton field="adjusted" label="Po korekcie" activeField={sortField} direction={sortDirection} onChange={setReportSort} />
+        </div>
+
         {report.length === 0 ? (
-          <div className="rounded-[24px] border border-dashed bg-white px-6 py-14 text-center"><Filter className="mx-auto size-8 text-muted-foreground" /><p className="mt-4 font-bold">Brak danych spełniających filtry</p><Button variant="outline" className="mt-4 print:hidden" onClick={resetFilters}><RotateCcw /> Wyczyść filtry</Button></div>
-        ) : report.map((category) => <CategoryGroup key={category.id} category={category} />)}
+          <div className="rounded-xl border border-dashed bg-white px-6 py-14 text-center"><Filter className="mx-auto size-8 text-muted-foreground" /><p className="mt-4 font-bold">Brak danych spełniających filtry</p><Button variant="outline" className="mt-4 print:hidden" onClick={resetFilters}><RotateCcw /> Wyczyść filtry</Button></div>
+        ) : report.map((category) => <CategoryGroup key={category.id} category={category} sortField={sortField} sortDirection={sortDirection} onSort={setReportSort} />)}
       </section>
     </div>
   );
@@ -353,24 +375,12 @@ function incrementOption(target: Map<string, FilterOption>, value: string, label
   target.set(value, option);
 }
 
-function createDistribution(items: InventoryItem[], type: "category" | "room") {
-  const groups = new Map<string, { name: string; entries: number; products: Set<string> }>();
-  items.forEach((item) => {
-    const id = type === "category" ? item.product?.category?.id ?? "none" : item.room?.id ?? "deleted";
-    const name = type === "category" ? item.product?.category?.name ?? "Bez kategorii" : item.room?.name ?? "Strefa usunięta";
-    const group = groups.get(id) ?? { name, entries: 0, products: new Set<string>() };
-    group.entries += 1;
-    if (item.product?.id) group.products.add(item.product.id);
-    groups.set(id, group);
-  });
-  return [...groups.values()].map((group) => ({ name: group.name, entries: group.entries, products: group.products.size })).sort((a, b) => b.entries - a.entries);
-}
-
-function MultiFilter({ label, values, options, onChange }: { label: string; values: string[]; options: FilterOption[]; onChange: (values: string[]) => void }) {
+function MultiFilter({ label, emptyLabel, values, options, onChange }: { label: string; emptyLabel: string; values: string[]; options: FilterOption[]; onChange: (values: string[]) => void }) {
   const toggle = (value: string) => onChange(values.includes(value) ? values.filter((entry) => entry !== value) : [...values, value]);
+  const isEmpty = options.length === 0;
   return (
     <Popover>
-      <PopoverTrigger asChild><Button variant={values.length ? "default" : "outline"} className="w-full justify-between"><span className="flex items-center gap-2"><Filter /> {values.length ? `${label}: ${values.length}` : label}</span><ChevronDown /></Button></PopoverTrigger>
+      <PopoverTrigger asChild><Button variant={values.length ? "default" : "outline"} className="w-full justify-between disabled:border-dashed disabled:bg-muted/70 disabled:opacity-100" disabled={isEmpty} title={isEmpty ? emptyLabel : undefined}><span className="flex items-center gap-2"><Filter /> {isEmpty ? emptyLabel : values.length ? `${label}: ${values.length}` : label}</span><ChevronDown /></Button></PopoverTrigger>
       <PopoverContent align="start" className="w-72 p-3">
         <div className="mb-2 flex items-center justify-between"><p className="text-sm font-bold">{label}</p>{values.length > 0 && <Button variant="ghost" size="sm" onClick={() => onChange([])}>Wyczyść</Button>}</div>
         <div className="max-h-64 space-y-1 overflow-auto">
@@ -382,27 +392,22 @@ function MultiFilter({ label, values, options, onChange }: { label: string; valu
 }
 
 function SummaryStat({ icon: Icon, label, value }: { icon: typeof Boxes; label: string; value: string }) {
-  return <div className="rounded-[20px] border bg-white p-4 shadow-sm sm:p-5"><div className="grid size-10 place-items-center rounded-xl bg-[#e8f3ed] text-primary"><Icon className="size-5" /></div><p className="mt-4 text-2xl font-black tracking-tight">{value}</p><p className="mt-0.5 text-sm text-muted-foreground">{label}</p></div>;
+  return <div className="app-stat-card rounded-xl border bg-white p-4 shadow-sm sm:p-5"><div className="grid size-10 place-items-center rounded-xl bg-[#e8f3ed] text-primary"><Icon className="size-5" /></div><p className="mt-4 text-2xl font-black tracking-tight">{value}</p><p className="mt-0.5 text-sm text-muted-foreground">{label}</p></div>;
 }
 
 const quantityTones = { yellow: "bg-[#fff4be] text-[#775d00]", green: "bg-[#e8f3ed] text-primary", blue: "bg-[#e8f0fa] text-[#315f96]" };
 
 function BalanceStat({ icon: Icon, label, unit, balance, tone }: { icon: typeof Scale; label: string; unit: string; balance: { counted: number; sold: number; adjusted: number }; tone: keyof typeof quantityTones }) {
-  return <div className="rounded-[20px] border bg-white p-4 shadow-sm"><div className="flex items-center gap-3"><div className={`grid size-11 shrink-0 place-items-center rounded-2xl ${quantityTones[tone]}`}><Icon /></div><div><p className="text-xs font-medium text-muted-foreground">{label}</p><p className="text-xl font-black">{number(balance.adjusted)} <span className="text-sm text-muted-foreground">{unit} po korekcie</span></p></div></div><div className="mt-4 grid grid-cols-2 gap-2 border-t pt-3 text-xs"><div><p className="text-muted-foreground">Policzono</p><p className="mt-0.5 font-bold">{number(balance.counted)} {unit}</p></div><div><p className="text-muted-foreground">Sprzedano później</p><p className="mt-0.5 font-bold text-[#b72128]">− {number(balance.sold)} {unit}</p></div></div></div>;
+  return <div className="app-balance-card rounded-xl border bg-white p-4 shadow-sm"><div className="flex items-center gap-3"><div className={`grid size-11 shrink-0 place-items-center rounded-2xl ${quantityTones[tone]}`}><Icon /></div><div><p className="text-xs font-medium text-muted-foreground">{label}</p><p className="text-xl font-black">{number(balance.adjusted)} <span className="text-sm text-muted-foreground">{unit} po korekcie</span></p></div></div><div className="mt-4 grid grid-cols-2 gap-2 border-t pt-3 text-xs"><div><p className="text-muted-foreground">Stan spisany</p><p className="mt-0.5 font-bold">{number(balance.counted)} {unit}</p></div><div><p className="text-muted-foreground">Sprzedano później</p><p className="mt-0.5 font-bold text-[#b72128]">− {number(balance.sold)} {unit}</p></div></div></div>;
 }
 
-function DistributionCard({ icon: Icon, title, items }: { icon: typeof MapPin; title: string; items: { name: string; entries: number; products: number }[] }) {
-  const max = Math.max(...items.map((item) => item.entries), 1);
-  return <div className="rounded-[24px] border bg-white p-5 shadow-sm sm:p-6"><h2 className="flex items-center gap-2 text-lg font-bold"><Icon className="size-5 text-primary" /> {title}</h2>{items.length === 0 ? <p className="mt-5 text-sm text-muted-foreground">Brak danych</p> : <div className="mt-5 space-y-4">{items.slice(0, 8).map((item) => <div key={item.name}><div className="mb-1.5 flex items-center justify-between gap-4 text-sm"><span className="truncate font-semibold">{item.name}</span><span className="shrink-0 text-xs font-bold text-muted-foreground">{item.entries} wpisów · {item.products} prod.</span></div><div className="h-2 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-primary" style={{ width: `${(item.entries / max) * 100}%` }} /></div></div>)}</div>}</div>;
-}
-
-function CategoryGroup({ category }: { category: CategoryReportGroup }) {
+function CategoryGroup({ category, sortField, sortDirection, onSort }: { category: CategoryReportGroup; sortField: ReportSortField; sortDirection: ReportSortDirection; onSort: (field: ReportSortField) => void }) {
   return (
-    <details open className="overflow-hidden rounded-[24px] border bg-white shadow-sm print:break-inside-avoid">
+    <details open className="app-report-group overflow-hidden rounded-xl border bg-white shadow-sm print:break-inside-avoid">
       <summary className="flex cursor-pointer list-none flex-wrap items-center gap-3 bg-[#173b2d] px-5 py-4 text-white marker:hidden sm:px-6">
         <div className="grid size-10 place-items-center rounded-xl bg-white/10"><Layers3 /></div>
         <div className="min-w-0 flex-1"><h3 className="truncate text-lg font-bold">{category.name}</h3><p className="text-xs text-white/65">{category.productCount} produktów · {category.entryCount} wpisów</p></div>
-        <div className="flex flex-wrap justify-end gap-2">{category.units.map((unit) => <span key={unit.unit} className="rounded-full bg-white/10 px-3 py-1.5 text-xs font-bold">{formatReportQuantity(unit.quantity, unit.unit)} → {formatReportQuantity(unit.adjustedQuantity, unit.unit)}</span>)}</div>
+        <div className="flex flex-wrap justify-end gap-2">{category.units.map((unit) => <span key={unit.unit} className="rounded-md bg-white/10 px-3 py-1.5 text-xs font-bold">{formatReportQuantity(unit.quantity, unit.unit)} → {formatReportQuantity(unit.adjustedQuantity, unit.unit)}</span>)}</div>
         <ChevronDown className="size-5 details-chevron" />
       </summary>
 
@@ -413,10 +418,22 @@ function CategoryGroup({ category }: { category: CategoryReportGroup }) {
               <div className="flex items-center gap-3"><div className="grid size-9 place-items-center rounded-xl bg-white text-primary shadow-sm">{unit.unit === "PIECE" ? <Boxes className="size-4" /> : <Scale className="size-4" />}</div><div><h4 className="font-bold">{reportUnitLabels[unit.unit]}</h4><p className="text-xs text-muted-foreground">{unit.productCount} produktów · {unit.entryCount} wpisów</p></div></div>
               <BalanceValues unit={unit.unit} counted={unit.quantity} sold={unit.soldQuantity} adjusted={unit.adjustedQuantity} />
             </div>
+            <div className="hidden border-y bg-white px-4 py-2 print:hidden sm:px-5 lg:grid lg:grid-cols-[minmax(190px,0.9fr)_minmax(240px,1fr)_minmax(300px,1.1fr)] lg:items-center">
+              <div className="flex items-center gap-1">
+                <ReportSortButton field="name" label="Produkt" activeField={sortField} direction={sortDirection} onChange={onSort} />
+                <ReportSortButton field="code" label="Kod" activeField={sortField} direction={sortDirection} onChange={onSort} />
+              </div>
+              <ReportSortButton field="rooms" label="Strefy" activeField={sortField} direction={sortDirection} onChange={onSort} className="justify-start" />
+              <div className="grid grid-cols-3 gap-2">
+                <ReportSortButton field="quantity" label="Stan spisany" activeField={sortField} direction={sortDirection} onChange={onSort} className="justify-end px-1.5" />
+                <ReportSortButton field="sold" label="Sprzedano" activeField={sortField} direction={sortDirection} onChange={onSort} className="justify-end px-1.5" />
+                <ReportSortButton field="adjusted" label="Po korekcie" activeField={sortField} direction={sortDirection} onChange={onSort} className="justify-end px-1.5" />
+              </div>
+            </div>
             <div className="divide-y">
               {unit.products.map((product) => (
-                <article key={product.id} className={`grid gap-3 px-4 py-4 sm:px-5 lg:grid-cols-[minmax(190px,0.9fr)_minmax(240px,1fr)_minmax(300px,1.1fr)] lg:items-center ${product.soldQuantity > 0 ? "bg-amber-50/40" : ""}`}>
-                  <div className="min-w-0"><div className="flex items-center gap-2"><h5 className="truncate font-bold">{product.name}</h5>{product.soldQuantity > 0 && <span className="shrink-0 rounded-full bg-[#fff4be] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#775d00]">sprzedaż</span>}</div><p className="mt-1 font-mono text-xs text-muted-foreground">{product.code} · {product.entryCount} {product.entryCount === 1 ? "wpis" : "wpisy"}{product.orderCount > 0 && ` · ${product.orderCount} par.`}</p></div>
+                <article key={product.id} className={`app-data-row grid gap-3 px-4 py-4 sm:px-5 lg:grid-cols-[minmax(190px,0.9fr)_minmax(240px,1fr)_minmax(300px,1.1fr)] lg:items-center ${product.soldQuantity > 0 ? "bg-amber-50/40" : ""}`}>
+                  <div className="min-w-0"><div className="flex items-center gap-2"><h5 className="truncate font-bold">{product.name}</h5>{product.soldQuantity > 0 && <span className="shrink-0 rounded-md bg-[#fff4be] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#775d00]">sprzedaż</span>}</div><p className="mt-1 font-mono text-xs text-muted-foreground">{product.code} · {product.entryCount} {product.entryCount === 1 ? "wpis" : "wpisy"}{product.orderCount > 0 && ` · ${product.orderCount} par.`}</p></div>
                   <div className="flex flex-wrap gap-2">{product.rooms.map((room) => <span key={room.id} className="inline-flex items-center gap-1.5 rounded-xl bg-muted px-2.5 py-1.5 text-xs"><MapPin className="size-3.5 text-primary" /><strong>{room.name}:</strong> {formatReportQuantity(room.quantity, product.unit)}{room.entryCount > 1 && <span className="text-muted-foreground">({room.entryCount}×)</span>}</span>)}</div>
                   <BalanceValues unit={product.unit} counted={product.quantity} sold={product.soldQuantity} adjusted={product.adjustedQuantity} />
                 </article>
@@ -429,8 +446,30 @@ function CategoryGroup({ category }: { category: CategoryReportGroup }) {
   );
 }
 
+function ReportSortButton({ field, label, activeField, direction, onChange, className }: { field: ReportSortField; label: string; activeField: ReportSortField; direction: ReportSortDirection; onChange: (field: ReportSortField) => void; className?: string }) {
+  const isActive = field === activeField;
+  const directionLabel = direction === "asc" ? "rosnąco" : "malejąco";
+  return (
+    <button
+      type="button"
+      className={cn(
+        "inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-lg px-2.5 text-xs font-bold transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
+        isActive ? "bg-[#e8f3ed] text-primary" : "text-muted-foreground",
+        className
+      )}
+      onClick={() => onChange(field)}
+      aria-pressed={isActive}
+      aria-label={`Sortuj po: ${label}${isActive ? `, obecnie ${directionLabel}` : ""}`}
+      title={isActive ? `Sortowanie ${directionLabel}; kliknij, aby odwrócić` : `Sortuj po: ${label}`}
+    >
+      <span>{label}</span>
+      {isActive ? (direction === "asc" ? <ArrowUp className="size-3.5" /> : <ArrowDown className="size-3.5" />) : <ChevronsUpDown className="size-3.5 opacity-50" />}
+    </button>
+  );
+}
+
 function BalanceValues({ unit, counted, sold, adjusted }: { unit: ReportUnit; counted: number; sold: number; adjusted: number }) {
-  return <div className="grid grid-cols-3 gap-2 text-right"><div><p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Policzono</p><p className="mt-1 text-sm font-bold">{formatReportQuantity(counted, unit)}</p></div><div><p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Sprzedano</p><p className={`mt-1 text-sm font-bold ${sold > 0 ? "text-[#b72128]" : "text-muted-foreground"}`}>− {formatReportQuantity(sold, unit)}</p></div><div><p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Po korekcie</p><p className={`mt-1 text-base font-black ${adjusted < 0 ? "text-destructive" : "text-primary"}`}>{formatReportQuantity(adjusted, unit)}</p></div></div>;
+  return <div className="grid grid-cols-3 gap-2 text-right"><div><p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Stan spisany</p><p className="mt-1 text-sm font-bold">{formatReportQuantity(counted, unit)}</p></div><div><p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Sprzedano</p><p className={`mt-1 text-sm font-bold ${sold > 0 ? "text-[#b72128]" : "text-muted-foreground"}`}>− {formatReportQuantity(sold, unit)}</p></div><div><p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Po korekcie</p><p className={`mt-1 text-base font-black ${adjusted < 0 ? "text-destructive" : "text-primary"}`}>{formatReportQuantity(adjusted, unit)}</p></div></div>;
 }
 
 export default InventorySummaryPage;

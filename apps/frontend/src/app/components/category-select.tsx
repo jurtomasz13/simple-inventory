@@ -8,14 +8,19 @@ type CategorySelectProps = {
 };
 
 export function CategorySelect({ value, onValueChange, placeholder = "Wybierz kategorię" }: CategorySelectProps) {
-    const { data: categories = [] } = useCategories();
+    const { data: categories = [], isLoading } = useCategories();
+    const isUnavailable = !isLoading && categories.length === 0;
 
     return (
-        <Select value={value} onValueChange={onValueChange}>
-            <SelectTrigger className="w-full">
-                <SelectValue placeholder={placeholder} />
+        <Select value={value} onValueChange={onValueChange} disabled={isLoading || isUnavailable}>
+            <SelectTrigger className="w-full" title={isUnavailable ? "Brak kategorii — dodaj ją najpierw" : undefined}>
+                {isLoading
+                    ? <span className="truncate">Wczytywanie kategorii…</span>
+                    : isUnavailable
+                      ? <span className="truncate">Brak kategorii</span>
+                      : <SelectValue placeholder={placeholder} />}
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent isEmpty={categories.length === 0} emptyMessage={isLoading ? "Wczytywanie kategorii…" : "Brak kategorii — dodaj ją najpierw"}>
                 {categories.map((category) => (
                     <SelectItem key={category.id} value={category.id}>{category.name}</SelectItem>
                 ))}

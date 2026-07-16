@@ -1,7 +1,7 @@
 import { BrowserCodeReader, BrowserMultiFormatReader, type IScannerControls } from "@zxing/browser";
 import { BarcodeFormat, DecodeHintType } from "@zxing/library";
 import { Camera, ImageUp, LoaderCircle, ScanLine } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { productCodeFromScan } from "@/utils/barcode";
 import { cn } from "@/utils/cn";
 import { Button } from "./ui/button";
@@ -69,7 +69,7 @@ export function BarcodeScannerButton({
           {!iconOnly && label}
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-h-[calc(100dvh-1rem)] overflow-y-auto rounded-[24px] p-4 sm:max-w-2xl sm:p-6">
+      <DialogContent className="max-h-[calc(100dvh-1rem)] overflow-y-auto rounded-xl p-4 sm:max-w-2xl sm:p-6">
         <DialogHeader className="pr-8">
           <DialogTitle className="text-2xl">Zeskanuj kod produktu</DialogTitle>
           <DialogDescription>Skieruj tylny aparat na QR, EAN, UPC lub Code 128. Kod zostanie przyjęty automatycznie.</DialogDescription>
@@ -86,17 +86,22 @@ function ScannerCamera({ onDetected }: { onDetected: (value: string) => void }) 
   const controlsRef = useRef<IScannerControls | null>(null);
   const resultAcceptedRef = useRef(false);
   const activeRef = useRef(true);
+  const onDetectedRef = useRef(onDetected);
   const [cameraError, setCameraError] = useState("");
   const [isCameraStarting, setIsCameraStarting] = useState(true);
   const [isPhotoScanning, setIsPhotoScanning] = useState(false);
   const [photoError, setPhotoError] = useState("");
 
-  const finish = (value: string) => {
+  useEffect(() => {
+    onDetectedRef.current = onDetected;
+  }, [onDetected]);
+
+  const finish = useCallback((value: string) => {
     if (!activeRef.current || resultAcceptedRef.current) return;
     resultAcceptedRef.current = true;
     controlsRef.current?.stop();
-    onDetected(value);
-  };
+    onDetectedRef.current(value);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -157,7 +162,7 @@ function ScannerCamera({ onDetected }: { onDetected: (value: string) => void }) 
       controlsRef.current = null;
       if (videoElement) BrowserCodeReader.cleanVideoSource(videoElement);
     };
-  }, []);
+  }, [finish]);
 
   const scanPhoto = async (file?: File) => {
     if (!file) return;
@@ -181,9 +186,9 @@ function ScannerCamera({ onDetected }: { onDetected: (value: string) => void }) 
 
   return (
     <div className="space-y-4">
-      <div className="relative aspect-[4/3] max-h-[58dvh] overflow-hidden rounded-[20px] bg-slate-950">
+      <div className="relative aspect-[4/3] max-h-[58dvh] overflow-hidden rounded-xl bg-slate-950">
         <video ref={videoRef} muted playsInline className={cn("size-full object-cover", cameraError && "opacity-20")} />
-        {!cameraError && <div className="pointer-events-none absolute inset-[14%] rounded-[20px] border-2 border-white/90 shadow-[0_0_0_999px_rgba(0,0,0,0.25)]"><span className="absolute inset-x-5 top-1/2 h-0.5 bg-red-400/90 shadow-[0_0_10px_rgba(248,113,113,0.9)]" /></div>}
+        {!cameraError && <div className="pointer-events-none absolute inset-[14%] rounded-lg border-2 border-white/90 shadow-[0_0_0_999px_rgba(0,0,0,0.25)]"><span className="absolute inset-x-5 top-1/2 h-0.5 bg-red-400/90 shadow-[0_0_10px_rgba(248,113,113,0.9)]" /></div>}
         {isCameraStarting && <div className="absolute inset-0 grid place-items-center text-white"><div className="text-center"><LoaderCircle className="mx-auto size-8 animate-spin" /><p className="mt-3 text-sm font-semibold">Uruchamiam aparat…</p></div></div>}
         {cameraError && !isCameraStarting && <div className="absolute inset-0 grid place-items-center p-6 text-center text-white"><div><Camera className="mx-auto size-9 text-white/70" /><p className="mt-3 max-w-md text-sm font-semibold leading-6">{cameraError}</p></div></div>}
       </div>

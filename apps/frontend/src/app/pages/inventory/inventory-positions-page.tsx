@@ -1,6 +1,7 @@
 import type { CreateInventoryItem, InventoryItem } from "@/api/inventory-items";
 import type { Product } from "@/api/products";
 import { InventoryItemForm } from "@/app/components/forms/inventory-item-form";
+import { LoadingState } from "@/app/components/loading-state";
 import { ProductForm, type ProductFormValues } from "@/app/components/forms/product-form";
 import { Button } from "@/app/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/app/components/ui/dialog";
@@ -24,8 +25,8 @@ export function InventoryPositionsPage() {
   const { data: inventory, isLoading: isLoadingInventory } = useInventory(id);
   const { data: inventoryItems = [], isLoading: isLoadingItems, error } = useInventoryItems(id);
   const { data: products = [], isLoading: isLoadingProducts } = useProducts();
-  const { data: catalogCategories = [] } = useCategories();
-  const { data: rooms = [] } = useRooms();
+  const { data: catalogCategories = [], isLoading: isLoadingCategories } = useCategories();
+  const { data: rooms = [], isLoading: isLoadingRooms } = useRooms();
   const { createProductMutation } = useProductMutations();
   const { createInventoryMutation, updateInventoryMutation, deleteInventoryMutation } = useInventoryMutations();
   const [searchTerm, setSearchTerm] = useState("");
@@ -129,17 +130,17 @@ export function InventoryPositionsPage() {
     setQuickProductCode("");
   };
 
-  const isLoading = isLoadingInventory || isLoadingItems || isLoadingProducts;
+  const isLoading = isLoadingInventory || isLoadingItems || isLoadingProducts || isLoadingCategories || isLoadingRooms;
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+    <div className="app-page space-y-6">
+      <div className="app-page-header flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <Link to="/inventory" className="mb-3 inline-flex min-h-10 items-center gap-2 rounded-lg text-sm font-semibold text-muted-foreground hover:text-foreground">
             <ArrowLeft className="size-4" /> Wszystkie inwentaryzacje
           </Link>
-          <p className="text-xs font-bold uppercase tracking-[0.14em] text-primary">Liczenie produktów</p>
-          <h1 className="mt-1 text-3xl font-black tracking-[-0.035em] sm:text-4xl">{inventory?.name ?? "Arkusz inwentaryzacji"}</h1>
+          <p className="text-xs font-bold uppercase tracking-[0.14em] text-primary">Pozycje inwentaryzacji</p>
+          <h1 className="mt-1 text-3xl font-black tracking-[-0.035em] sm:text-4xl">{inventory?.name ?? "Inwentaryzacja"}</h1>
           <p className="mt-2 text-muted-foreground">Dodawaj pozycje kolejno, strefa po strefie. Ostatnio wybrana strefa zostanie zapamiętana.</p>
         </div>
         <div className="flex flex-col gap-2 sm:flex-row">
@@ -150,7 +151,7 @@ export function InventoryPositionsPage() {
 
       {(availableProducts.length === 0 || rooms.length === 0) && !isLoading && (
         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
-          <p className="font-bold">Zanim zaczniesz liczenie, uzupełnij dane podstawowe.</p>
+          <p className="font-bold">Przed rozpoczęciem inwentaryzacji uzupełnij dane podstawowe.</p>
           <p className="mt-1">
             {availableProducts.length === 0 && "Pierwszy produkt możesz dodać bezpośrednio w formularzu poniżej. "}
             {rooms.length === 0 && <>Dodaj co najmniej jedną <Link className="font-bold underline" to="/rooms">strefę sklepu</Link>.</>}
@@ -158,14 +159,17 @@ export function InventoryPositionsPage() {
         </div>
       )}
 
-      <div className="grid items-start gap-5 xl:grid-cols-[390px_1fr]">
-        <aside className="rounded-[24px] border bg-white p-5 shadow-sm xl:sticky xl:top-[92px]">
+      {isLoading ? (
+        <LoadingState variant="workspace" count={4} title="Przygotowywanie inwentaryzacji" description="Pobieram produkty, strefy i zapisane pozycje…" />
+      ) : (
+      <div className="app-workspace-grid grid items-start gap-5 xl:grid-cols-[390px_1fr]">
+        <aside className="app-panel rounded-xl border bg-white p-5 shadow-sm xl:sticky xl:top-[92px]">
           <div className="mb-5 flex items-center justify-between">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.12em] text-primary">Szybki zapis</p>
               <h2 className="mt-1 text-xl font-bold">Dodaj pozycję</h2>
             </div>
-            {savedMessage && <span className="flex items-center gap-1 rounded-full bg-[#e8f3ed] px-2.5 py-1 text-xs font-bold text-primary"><Check className="size-3.5" /> {savedMessage}</span>}
+            {savedMessage && <span className="flex items-center gap-1 rounded-md bg-[#e8f3ed] px-2.5 py-1 text-xs font-bold text-primary"><Check className="size-3.5" /> {savedMessage}</span>}
           </div>
           <InventoryItemForm
             key={entryVersion}
@@ -182,51 +186,53 @@ export function InventoryPositionsPage() {
           {createInventoryMutation.error && <p className="mt-3 rounded-xl bg-red-50 p-3 text-sm text-red-800">Nie udało się zapisać pozycji. Sprawdź dane i spróbuj ponownie.</p>}
         </aside>
 
-        <section className="min-w-0 rounded-[24px] border bg-white p-4 shadow-sm sm:p-5">
+        <section className="app-panel min-w-0 rounded-xl border bg-white p-4 shadow-sm sm:p-5">
           <div className="flex flex-col gap-3 lg:flex-row">
             <div className="relative flex-1">
               <Search className="pointer-events-none absolute left-4 top-1/2 size-5 -translate-y-1/2 text-muted-foreground" />
-              <Input value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} placeholder="Szukaj w policzonych pozycjach…" className="pl-12" />
+              <Input value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} placeholder="Szukaj w pozycjach inwentaryzacji…" className="pl-12" />
             </div>
-            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="w-full lg:w-48"><SelectValue placeholder="Kategoria" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Wszystkie kategorie</SelectItem>
+            <Select value={categoryFilter} onValueChange={setCategoryFilter} disabled={categories.length === 0}>
+              <SelectTrigger className="w-full lg:w-48" title={categories.length === 0 ? "Brak kategorii w pozycjach inwentaryzacji" : undefined}>
+                {categories.length === 0 ? <span className="truncate">Brak kategorii</span> : <SelectValue placeholder="Kategoria" />}
+              </SelectTrigger>
+              <SelectContent isEmpty={categories.length === 0} emptyMessage="Brak kategorii w pozycjach inwentaryzacji">
+                {categories.length > 0 && <SelectItem value="all">Wszystkie kategorie</SelectItem>}
                 {categories.map(([categoryId, name]) => <SelectItem key={categoryId} value={categoryId}>{name}</SelectItem>)}
               </SelectContent>
             </Select>
-            <Select value={roomFilter} onValueChange={setRoomFilter}>
-              <SelectTrigger className="w-full lg:w-48"><SelectValue placeholder="Strefa" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Wszystkie strefy</SelectItem>
+            <Select value={roomFilter} onValueChange={setRoomFilter} disabled={rooms.length === 0}>
+              <SelectTrigger className="w-full lg:w-48" title={rooms.length === 0 ? "Brak stref" : undefined}>
+                {rooms.length === 0 ? <span className="truncate">Brak stref</span> : <SelectValue placeholder="Strefa" />}
+              </SelectTrigger>
+              <SelectContent isEmpty={rooms.length === 0} emptyMessage="Brak stref">
+                {rooms.length > 0 && <SelectItem value="all">Wszystkie strefy</SelectItem>}
                 {rooms.map((room) => <SelectItem key={room.id} value={room.id}>{room.name}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
 
           <div className="mt-5 flex items-center justify-between border-b pb-3">
-            <h2 className="font-bold">Policzone pozycje</h2>
+            <h2 className="font-bold">Pozycje inwentaryzacji</h2>
             <span className="text-sm font-medium text-muted-foreground">{filteredItems.length} z {inventoryItems.length}</span>
           </div>
 
           {error ? (
             <p className="py-10 text-center text-sm text-red-700">Nie udało się pobrać pozycji z serwera.</p>
-          ) : isLoading ? (
-            <div className="space-y-3 py-4">{[0, 1, 2, 3].map((item) => <div key={item} className="h-24 animate-pulse rounded-2xl bg-muted" />)}</div>
           ) : filteredItems.length === 0 ? (
             <div className="py-14 text-center">
               <div className="mx-auto grid size-12 place-items-center rounded-2xl bg-muted text-muted-foreground"><PackageOpen /></div>
-              <p className="mt-4 font-bold">{inventoryItems.length === 0 ? "Arkusz jest jeszcze pusty" : "Brak pasujących pozycji"}</p>
-              <p className="mt-1 text-sm text-muted-foreground">{inventoryItems.length === 0 ? "Pierwszy policzony produkt dodaj w formularzu obok." : "Zmień wyszukiwanie lub filtry."}</p>
+              <p className="mt-4 font-bold">{inventoryItems.length === 0 ? "Inwentaryzacja jest jeszcze pusta" : "Brak pasujących pozycji"}</p>
+              <p className="mt-1 text-sm text-muted-foreground">{inventoryItems.length === 0 ? "Pierwszy produkt dodaj w formularzu obok." : "Zmień wyszukiwanie lub filtry."}</p>
             </div>
           ) : (
             <div className="divide-y">
               {filteredItems.map((item) => (
-                <article key={item.id} className="grid gap-3 py-4 sm:grid-cols-[minmax(0,1fr)_150px_auto] sm:items-center">
+                <article key={item.id} className="app-data-row grid gap-3 py-4 sm:grid-cols-[minmax(0,1fr)_150px_auto] sm:items-center">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
                       <h3 className="truncate font-bold">{item.product?.name ?? "Produkt usunięty"}</h3>
-                      {item.product?.category && <span className="hidden rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-muted-foreground md:inline">{item.product.category.name}</span>}
+                      {item.product?.category && <span className="hidden rounded-md bg-muted px-2 py-0.5 text-[11px] font-semibold text-muted-foreground md:inline">{item.product.category.name}</span>}
                     </div>
                     <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                       <span className="font-mono">{item.product?.code ?? "brak kodu"}</span>
@@ -247,11 +253,12 @@ export function InventoryPositionsPage() {
           )}
         </section>
       </div>
+      )}
 
       <Dialog open={Boolean(editingItem)} onOpenChange={(open) => !open && setEditingItem(null)}>
-        <DialogContent className="rounded-[24px] sm:max-w-xl">
+        <DialogContent className="rounded-xl sm:max-w-xl">
           <DialogHeader>
-            <DialogTitle className="text-2xl">Edytuj policzoną pozycję</DialogTitle>
+            <DialogTitle className="text-2xl">Edytuj pozycję inwentaryzacji</DialogTitle>
             <DialogDescription>Zmień produkt, strefę lub ilość. Zapis zostanie od razu zaktualizowany.</DialogDescription>
           </DialogHeader>
           <InventoryItemForm
@@ -268,13 +275,13 @@ export function InventoryPositionsPage() {
       </Dialog>
 
       <Dialog open={isQuickProductDialogOpen} onOpenChange={(open) => !open && closeQuickProductDialog()}>
-        <DialogContent className="max-h-[90dvh] overflow-y-auto rounded-[24px] sm:max-w-xl">
+        <DialogContent className="max-h-[90dvh] overflow-y-auto rounded-xl sm:max-w-xl">
           <DialogHeader>
             <DialogTitle className="text-2xl">{quickProductCode ? "Dodaj zeskanowany produkt" : "Dodaj nowy produkt"}</DialogTitle>
             <DialogDescription>
               {quickProductCode
-                ? `Kod ${quickProductCode} nie istnieje w katalogu. Uzupełnij dane, a produkt od razu wróci do formularza liczenia.`
-                : "Uzupełnij dane, a produkt zostanie od razu wybrany w formularzu liczenia."}
+                ? `Kod ${quickProductCode} nie istnieje w katalogu. Uzupełnij dane, a produkt od razu wróci do formularza pozycji.`
+                : "Uzupełnij dane, a produkt zostanie od razu wybrany w formularzu pozycji."}
             </DialogDescription>
           </DialogHeader>
           {catalogCategories.length === 0 ? (

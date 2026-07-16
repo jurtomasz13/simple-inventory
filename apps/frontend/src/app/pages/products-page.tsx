@@ -1,6 +1,7 @@
 import type { Product } from "@/api/products";
 import { BarcodeScannerButton } from "@/app/components/barcode-scanner";
 import { ProductForm, type ProductFormValues } from "@/app/components/forms/product-form";
+import { LoadingState } from "@/app/components/loading-state";
 import { Button } from "@/app/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/app/components/ui/dialog";
 import { Input } from "@/app/components/ui/input";
@@ -24,8 +25,9 @@ export function ProductsPage() {
   const [handledRequestedCode, setHandledRequestedCode] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [scanNotice, setScanNotice] = useState("");
-  const { data: products = [], isLoading, error } = useProducts();
-  const { data: categories = [] } = useCategories();
+  const { data: products = [], isLoading: isLoadingProducts, error } = useProducts();
+  const { data: categories = [], isLoading: isLoadingCategories } = useCategories();
+  const isLoading = isLoadingProducts || isLoadingCategories;
   const { createProductMutation, deleteProductMutation, updateProductMutation } = useProductMutations();
   const isSaving = createProductMutation.isPending || updateProductMutation.isPending;
 
@@ -68,7 +70,7 @@ export function ProductsPage() {
           setEditingProduct(null);
           setInitialCode("");
           setSearchTerm(data.code);
-          setScanNotice(`Dodano ${data.name}. Produkt jest gotowy do wybrania podczas liczenia.`);
+          setScanNotice(`Dodano ${data.name}. Produkt jest gotowy do użycia w inwentaryzacji.`);
           if (safeReturnTo) navigate(safeReturnTo, { replace: true });
           else if (requestedCode) navigate("/products", { replace: true });
         },
@@ -98,16 +100,16 @@ export function ProductsPage() {
   const categoryName = (categoryId: string | null) => categories.find((category) => category.id === categoryId)?.name ?? "Bez kategorii";
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+    <div className="app-page space-y-6">
+      <div className="app-page-header flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.14em] text-primary">Katalog sklepu</p>
           <h1 className="mt-1 text-3xl font-black tracking-[-0.035em] sm:text-4xl">Produkty</h1>
-          <p className="mt-2 text-muted-foreground">Kody i jednostki używane podczas liczenia.</p>
+          <p className="mt-2 text-muted-foreground">Kody i jednostki używane podczas inwentaryzacji.</p>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={(open) => open ? setIsDialogOpen(true) : closeDialog()}>
           <DialogTrigger asChild><Button size="lg" onClick={() => { setEditingProduct(null); setInitialCode(""); }}><Plus /> Dodaj produkt</Button></DialogTrigger>
-          <DialogContent className="rounded-[24px] sm:max-w-xl">
+          <DialogContent className="rounded-xl sm:max-w-xl">
             <DialogHeader>
               <DialogTitle className="text-2xl">{editingProduct ? "Edytuj produkt" : "Nowy produkt"}</DialogTitle>
               <DialogDescription>Podaj nazwę, kod do wyszukiwania, jednostkę i kategorię.</DialogDescription>
@@ -122,7 +124,7 @@ export function ProductsPage() {
         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">Najpierw dodaj co najmniej jedną <Link to="/categories" className="font-bold underline">kategorię produktu</Link>.</div>
       )}
 
-      <div className="max-w-2xl space-y-2">
+      <div className="app-toolbar max-w-2xl space-y-2">
         <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2">
           <div className="relative">
             <Search className="pointer-events-none absolute left-4 top-1/2 size-5 -translate-y-1/2 text-muted-foreground" />
@@ -136,13 +138,13 @@ export function ProductsPage() {
       {error ? (
         <p className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">Nie udało się pobrać produktów.</p>
       ) : isLoading ? (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{[0, 1, 2, 3, 4, 5].map((item) => <div key={item} className="h-48 animate-pulse rounded-[24px] border bg-white/60" />)}</div>
+        <LoadingState variant="cards" count={6} title="Wczytywanie katalogu" description="Pobieram produkty, kody i kategorie…" />
       ) : filteredProducts.length === 0 ? (
         <EmptyState icon={PackageOpen} title={products.length ? "Brak pasujących produktów" : "Katalog jest pusty"} />
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div className="app-entity-grid app-product-grid grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {filteredProducts.map((product) => (
-            <article key={product.id} className="rounded-[24px] border bg-white p-5 shadow-sm">
+            <article key={product.id} className="app-entity-card app-product-card rounded-xl border bg-white p-5 shadow-sm">
               <div className="flex items-start justify-between gap-3">
                 <div className="grid size-11 place-items-center rounded-2xl bg-[#e8f3ed] text-primary"><Barcode /></div>
                 <div className="flex gap-1">
@@ -165,7 +167,7 @@ export function ProductsPage() {
 }
 
 function EmptyState({ icon: Icon, title }: { icon: typeof PackageOpen; title: string }) {
-  return <div className="rounded-[28px] border border-dashed bg-white px-6 py-14 text-center"><Icon className="mx-auto size-8 text-muted-foreground" /><p className="mt-4 font-bold">{title}</p></div>;
+  return <div className="rounded-xl border border-dashed bg-white px-6 py-14 text-center"><Icon className="mx-auto size-8 text-muted-foreground" /><p className="mt-4 font-bold">{title}</p></div>;
 }
 
 export default ProductsPage;
